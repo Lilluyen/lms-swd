@@ -1,5 +1,5 @@
 /* ============================================================
-   Drafts, payment, lesson
+   Drafts, payment, lesson & Enrollment Module (4 Screens)
    ============================================================ */
 
 .draft,
@@ -7,8 +7,9 @@
   background: var(--card);
   border: 2px solid var(--ink);
   border-radius: 0;
-  padding: 16px;
-  margin: 14px 0;
+  padding: 20px;
+  margin: 18px 0;
+  box-shadow: var(--hard);
 }
 
 .draft p {
@@ -21,23 +22,253 @@
   margin-left: 8px;
 }
 
-.payment-card h2 {
+/* ---------- Screen 4.1: Course Details Enhancements ---------- */
+
+.hero-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.badge-bestseller {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--acid);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  padding: 3px 8px;
+  font-weight: 900;
+}
+
+.badge-level {
+  background: var(--paper-2);
+  color: var(--ink-2);
+  border: 1.5px solid var(--ink);
+  padding: 3px 8px;
+}
+
+.course-pricing-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 12px 0 16px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+}
+
+.price-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.price-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.sale-price {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--purple);
+}
+
+.orig-price {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.discount-tag {
+  background: var(--acid);
+  border: 1.5px solid var(--ink);
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.enrolled-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green, #1f7a3d);
+  color: #fff;
+  border: 2px solid var(--ink);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.course-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  margin: 22px 0;
+}
+
+.overview-box {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: var(--hard-sm);
+  padding: 18px 20px;
+}
+
+.overview-box h3 {
   font-size: 17px;
   font-weight: 800;
-  margin-bottom: 10px;
+  margin: 6px 0 14px;
+  text-transform: uppercase;
+}
+
+.outcomes-list,
+.inclusions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.outcomes-list li,
+.inclusions-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.outcomes-list li svg,
+.inclusions-list li svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--purple);
+}
+
+.curriculum-summary {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.module-desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.module-meta-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.lesson-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Screen 4.2: Checkout Stepper & VietQR Layout ---------- */
+
+.checkout-stepper {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  opacity: 0.72;
+}
+
+.stepper-item.current {
+  opacity: 1;
+  background: var(--acid);
+  box-shadow: var(--hard-sm);
+}
+
+.stepper-item.done {
+  opacity: 1;
+  background: #e3f5e8;
+}
+
+.stepper-badge {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 900;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.stepper-item.done .stepper-badge {
+  background: var(--green, #1f7a3d);
+  color: #fff;
+}
+
+.stepper-item strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stepper-item span {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.payment-card h2 {
+  font-size: 19px;
+  font-weight: 800;
+  margin: 4px 0 10px;
   text-transform: uppercase;
 }
 
 .payment-heading,
 .payment-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
 .payment-status {
-  padding: 7px 10px;
+  padding: 7px 12px;
   background: var(--acid);
   border: 2px solid var(--ink);
   font-size: 11px;
@@ -55,22 +286,197 @@
   background: #ffd9d0;
 }
 
-.payment-layout {
+.checkout-grid {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.15fr);
+  gap: 20px;
   margin: 16px 0;
 }
 
+@media (max-width: 860px) {
+  .checkout-grid,
+  .checkout-stepper {
+    grid-template-columns: 1fr;
+  }
+}
+
+.order-breakdown-box,
+.qr-payment-box {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 16px;
+}
+
+.breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 12px;
+}
+
+.breakdown-header strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: var(--purple);
+}
+
+.breakdown-course-item {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: var(--card);
+  border: 1.5px solid var(--ink);
+  margin-bottom: 14px;
+}
+
+.breakdown-course-item img {
+  width: 84px;
+  height: 54px;
+  object-fit: cover;
+  border: 1.5px solid var(--ink);
+}
+
+.breakdown-course-item b {
+  display: block;
+  font-size: 13.5px;
+  margin-bottom: 3px;
+}
+
+.breakdown-course-item span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.voucher-box {
+  background: var(--card);
+  border: 1.5px dashed var(--ink);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.voucher-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.voucher-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.voucher-Presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.voucher-chip {
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  background: var(--paper-2);
+  border: 1.5px solid var(--ink);
+  cursor: pointer;
+}
+
+.voucher-chip:hover,
+.voucher-chip.active {
+  background: var(--acid);
+}
+
+.voucher-chip.clear {
+  color: var(--red, #b42318);
+}
+
+.breakdown-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.breakdown-row.discount strong {
+  color: var(--green, #1f7a3d);
+}
+
+.breakdown-row.total {
+  border-top: 2px solid var(--ink);
+  border-bottom: 0;
+  padding-top: 10px;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.breakdown-row.total strong {
+  color: var(--purple);
+  font-size: 18px;
+}
+
+.payment-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 18px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .payment-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qr-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.qr-frame img,
 .payment-layout > img {
-  width: 210px;
-  height: 210px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
   display: block;
   margin: 0;
   padding: 6px;
   background: #fff;
   border: 2px solid var(--ink);
+}
+
+.qr-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--ink-2);
 }
 
 .payment-details {
@@ -80,16 +486,16 @@
 
 .payment-details > div {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) auto;
+  grid-template-columns: 135px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
+  gap: 8px;
+  min-height: 42px;
   border-bottom: 1px solid var(--line);
 }
 
 .payment-details span {
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -97,13 +503,47 @@
 .payment-details strong {
   min-width: 0;
   overflow-wrap: anywhere;
+  font-size: 13px;
 }
 
 .payment-code strong {
   color: var(--purple);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: 0.04em;
+}
+
+.polling-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 9px 12px;
+  background: #e3f5e8;
+  border: 1.5px solid var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green, #1f7a3d);
+  flex-shrink: 0;
+  animation: pulse-ring 1.4s infinite ease-in-out;
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
 }
 
 .copy-button {
@@ -118,7 +558,7 @@
 }
 
 .payment-footer {
-  padding-top: 12px;
+  padding-top: 14px;
   border-top: 2px solid var(--ink);
 }
 
@@ -130,8 +570,16 @@
   font-weight: 700;
 }
 
+.payment-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .outline.danger {
   color: var(--red, #b42318);
+  margin: 0;
 }
 
 .payment-message {
@@ -140,6 +588,302 @@
   background: var(--paper-2);
   border-left: 4px solid var(--ink);
 }
+
+/* ---------- Screen 4.3: Payment Result & Confirmation ---------- */
+
+.payment-result-page {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.receipt-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  margin: 14px 0 20px;
+  background: #e3f5e8;
+  border: 2px solid var(--ink);
+  box-shadow: var(--hard);
+}
+
+.receipt-banner-icon {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  background: var(--green, #1f7a3d);
+  color: #fff;
+  border: 2px solid var(--ink);
+  flex-shrink: 0;
+}
+
+.receipt-banner h1 {
+  font-size: clamp(20px, 2.5vw, 26px);
+  font-weight: 900;
+  margin: 4px 0 6px;
+  text-transform: uppercase;
+}
+
+.receipt-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.receipt-card {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: var(--hard);
+  padding: 22px 24px;
+}
+
+.receipt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 14px;
+}
+
+.receipt-card-header h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+
+.receipt-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+
+.receipt-row span {
+  color: var(--ink-3);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.receipt-row.highlight {
+  background: var(--acid);
+  border: 2px solid var(--ink);
+  font-size: 16px;
+}
+
+.receipt-row.highlight strong {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.receipt-copy-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.receipt-copy-val code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+  font-size: 13.5px;
+  background: var(--paper-2);
+  padding: 3px 8px;
+  border: 1px solid var(--ink);
+}
+
+.receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid var(--ink);
+}
+
+/* ---------- Screen 4.4: My Enrolled Courses Dashboard ---------- */
+
+.enrolled-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: var(--hard-sm);
+}
+
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-tab-btn {
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  transition:
+    background var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+
+.status-tab-btn:hover {
+  background: var(--paper-2);
+}
+
+.status-tab-btn.active {
+  background: var(--acid);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.enrolled-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  min-width: 260px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+
+.enrolled-search input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.enrolled-payment-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #e3f5e8;
+  color: #111;
+  border: 1.5px solid var(--ink);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.enrolled-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.learning-status-chip {
+  padding: 3px 7px;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  border: 1.5px solid var(--ink);
+  text-transform: uppercase;
+}
+
+.learning-status-chip.just-enrolled {
+  background: #d7e5ff;
+}
+
+.learning-status-chip.in-progress {
+  background: var(--acid);
+}
+
+.learning-status-chip.completed {
+  background: var(--green, #1f7a3d);
+  color: #fff;
+}
+
+.enrolled-date-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.enrolled-instructor-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.enrolled-progress-block {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--ink);
+}
+
+.progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.enrolled-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.enrolled-main-btn {
+  flex: 1;
+}
+
+.enrolled-archive-btn {
+  padding: 0 10px;
+}
+
+.order-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.order-code-sub {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* ---------- Reviews & Lesson Reader ---------- */
 
 .course-reviews {
   margin-top: 34px;
@@ -243,4 +987,3 @@
   font-size: 14px;
   color: var(--ink-2);
 }
-

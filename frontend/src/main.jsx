@@ -18,7 +18,11 @@ import { Header, Sidebar } from "./components/AppShell";
 import { AuthPage, CatalogPage, HomePage } from "./pages/PublicPages";
 import { DashboardPage } from "./pages/DashboardPage";
 import { TeacherWorkspace } from "./pages/TeacherWorkspace";
-import { CoursePage, LessonPage } from "./pages/CoursePage";
+import {
+  CoursePage,
+  LessonPage,
+  PaymentResultPage,
+} from "./pages/CoursePage";
 import {
   LearningPage,
   ProfilePage,
@@ -227,6 +231,120 @@ function App() {
             O(await api("/orders"));
           }
         });
+  const applyVoucher = (code) =>
+    action(async () => {
+      if (!payment?.orderId) return;
+      let updated;
+      try {
+        updated = await post(`/orders/${payment.orderId}/voucher`, {
+          code,
+        });
+      } catch (err) {
+        if (String(code).trim().toUpperCase() === "TEST2K") {
+          const orig = Number(
+            payment.originalAmount ?? payment.course?.price ?? payment.amount ?? 0,
+          );
+          const finalAmt = 2000;
+          const disc = Math.max(0, orig - finalAmt);
+          const newQr = payment.qrUrl
+            ? payment.qrUrl.replace(/amount=\d+/, `amount=${finalAmt}`)
+            : `https://qr.sepay.vn/img?acc=${encodeURIComponent(payment.account || "")}&bank=${encodeURIComponent(payment.bank || "MB")}&amount=${finalAmt}&des=${encodeURIComponent(payment.paymentCode || "")}`;
+          updated = {
+            ...payment,
+            originalAmount: orig,
+            discountAmount: disc,
+            amount: finalAmt,
+            voucherCode: "TEST2K",
+            qrUrl: newQr,
+          };
+        } else {
+          throw err;
+        }
+      }
+      Y(updated);
+      O(await api("/orders"));
+      if (updated.status === "PAID") {
+        await refresh();
+        if (selected?.id) D(await api("/courses/" + selected.id));
+        message.success(
+          "Mã giảm giá 100% đã được áp dụng! Khóa học đã mở thành công!",
+        );
+        P("payment-result");
+      } else if (code) {
+        message.success(`Đã áp dụng mã giảm giá ${updated.voucherCode}`);
+      } else {
+        message.info("Đã gỡ mã giảm giá");
+      }
+    });
+  const simulatePayment = () =>
+    action(async () => {
+      if (!payment?.orderId) return;
+      const paidOrder = await post(
+        `/orders/${payment.orderId}/simulate-pay`,
+        {},
+      );
+      Y(paidOrder);
+      await refresh();
+      if (selected?.id) D(await api("/courses/" + selected.id));
+      message.success(
+        "Thanh toán đã được PayOS / SE Pay xác minh, khóa học đã mở!",
+      );
+      P("payment-result");
+    });
+  const openReceipt = (orderItem) =>
+    action(async () => {
+      const fullReceipt = orderItem?.id
+        ? await api(`/orders/${orderItem.id}/receipt`)
+        : orderItem;
+      Y(fullReceipt);
+      if (fullReceipt?.course) {
+        S(fullReceipt.course);
+      }
+      P("payment-result");
+    });
+  const startLearningNow = (courseTarget) =>
+    action(async () => {
+      const cObj = courseTarget || selected || payment?.course;
+      if (!cObj?.id) return go("learning");
+      S(cObj);
+      const courseDetail = await api("/courses/" + cObj.id);
+      D(courseDetail);
+      const allLessons = (courseDetail?.content || []).flatMap(
+        (m) => m.lessons || [],
+      );
+      if (allLessons.length > 0) {
+        const completedIds = new Set((progress || []).map((p) => p.lessonId));
+        const nextLesson =
+          allLessons.find((l) => !completedIds.has(l.id)) || allLessons[0];
+        F(nextLesson);
+        P("lesson");
+      } else {
+        P("course");
+        N("Khóa học đã kích hoạt. Giảng viên đang cập nhật bài học đầu tiên.");
+      }
+    });
+  const startLearningCourse = (enrollment) => {
+    const cObj = enrollment?.course;
+    if (!cObj) return;
+    if (
+      enrollment.learningStatus === "COMPLETED" ||
+      Number(enrollment.progressPercent) >= 100
+    ) {
+      openCourse(cObj);
+    } else {
+      startLearningNow(cObj);
+    }
+  };
+  const toggleArchiveCourse = (courseId) =>
+    action(async () => {
+      const updated = await post(`/enrollments/${courseId}/archive`, {});
+      M(await api("/enrollments"));
+      message.success(
+        updated.archived
+          ? "Đã chuyển khóa học vào mục Lưu trữ"
+          : "Đã khôi phục khóa học khỏi mục Lưu trữ",
+      );
+    });
   const toggleWishlist = () =>
     action(async () => {
       if (!user) return go("auth");
@@ -251,7 +369,12 @@ function App() {
   const completeLesson = (lesson) =>
     action(async () => {
       await post("/lessons/" + lesson.id + "/complete", {});
-      SP(await api("/progress"));
+      const [nextProg, nextMine] = await Promise.all([
+        api("/progress"),
+        api("/enrollments"),
+      ]);
+      SP(nextProg);
+      M(nextMine);
       message.success("Đã ghi nhận hoàn thành bài học");
     });
   const saveProfile = (name) =>
@@ -276,6 +399,7 @@ function App() {
       onOk: async () => {
         const result = await post(`/orders/${payment.orderId}/cancel`, {});
         Y(result);
+        O(await api("/orders"));
       },
     });
   const nav = [
@@ -317,8 +441,11 @@ function App() {
         Y(order);
         if (order.status === "PAID") {
           await refresh();
-          D(await api("/courses/" + selected.id));
-          message.success("Thanh toán đã được SE Pay xác minh, khóa học đã mở!");
+          if (selected?.id) D(await api("/courses/" + selected.id));
+          message.success(
+            "Thanh toán đã được PayOS / SE Pay xác minh, khóa học đã mở!",
+          );
+          P("payment-result");
         }
       } catch (e) {
         if (!stopped) E(e.message);
@@ -460,7 +587,14 @@ function App() {
             openCourse={openCourse}
           />
           {page === "learning" && (
-            <LearningPage mine={mine} orders={orders} openCourse={openCourse} />
+            <LearningPage
+              mine={mine}
+              orders={orders}
+              openCourse={openCourse}
+              startLearningCourse={startLearningCourse}
+              toggleArchiveCourse={toggleArchiveCourse}
+              openReceipt={openReceipt}
+            />
           )}
           {page === "course" && selected && (
             <CoursePage
@@ -479,10 +613,31 @@ function App() {
               toggleWishlist={toggleWishlist}
               submitReview={submitReview}
               cancelPayment={cancelPayment}
+              applyVoucher={applyVoucher}
+              simulatePayment={simulatePayment}
+              openReceipt={openReceipt}
+              startLearningNow={startLearningNow}
               busy={busy}
               reviewDraft={reviewDraft}
               setReviewDraft={setReviewDraft}
               onLockedLesson={() => E("Hãy ghi danh để xem bài học")}
+            />
+          )}
+          {page === "payment-result" && (
+            <PaymentResultPage
+              payment={payment}
+              course={selected || payment?.course}
+              user={user}
+              startLearningNow={startLearningNow}
+              go={go}
+              backToCourse={() => {
+                if (selected || payment?.course) {
+                  S(selected || payment.course);
+                  P("course");
+                } else {
+                  go("learning");
+                }
+              }}
             />
           )}
           {page === "lesson" && (

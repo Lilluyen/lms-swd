@@ -1,6 +1,8 @@
 package com.example.lms.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.Instant;
 
 @Entity
 @Table(name = "payment_transactions")
@@ -16,7 +18,10 @@ public class CourseOrder {
   @ManyToOne
   public Course course;
 
-  public java.math.BigDecimal amount;
+  public BigDecimal originalAmount;
+  public BigDecimal discountAmount = BigDecimal.ZERO;
+  public String voucherCode;
+  public BigDecimal amount;
   public String status = "PENDING";
 
   @Column(unique = true)
@@ -25,11 +30,15 @@ public class CourseOrder {
   @Column(unique = true)
   public String transactionReference;
 
-  public java.time.Instant paymentDate;
-  public java.time.Instant createdAt = java.time.Instant.now();
-  public java.time.Instant expiresAt;
-  public java.time.Instant cancelledAt;
-  public java.math.BigDecimal paidAmount;
+  public Instant paymentDate;
+  public Instant createdAt = Instant.now();
+  public Instant expiresAt;
+  public Instant cancelledAt;
+  public BigDecimal paidAmount;
+
   @Column(length = 500)
   public String reconciliationNote;
+
+  @Column(length = 2000)
+  public String webhookPayload;
 }

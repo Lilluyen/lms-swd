@@ -1,6 +1,7 @@
 package com.example.lms.entity;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 
 @Entity
 @Table(
@@ -21,5 +22,33 @@ public class Enrollment {
   @ManyToOne
   public Course course;
 
-  public java.time.Instant enrolledAt = java.time.Instant.now();
+  public Instant enrolledAt = Instant.now();
+
+  public String status = "ACTIVE";
+
+  public boolean archived = false;
+
+  @Transient
+  public int totalLessons;
+
+  @Transient
+  public int completedLessons;
+
+  @Transient
+  public int progressPercent;
+
+  @Transient
+  public String learningStatus;
+
+  @Transient
+  public Long firstLessonId;
+
+  @Transient
+  public Long resumeLessonId;
+
+  @Transient
+  public String paymentBadge;
+
+  @Transient
+  public Long orderId;
 }
