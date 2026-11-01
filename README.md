@@ -4,9 +4,18 @@ React + Vite + Ant Design + Lucide; Spring Boot 3.5.6, Java 17, Spring Security,
 
 ## Chạy trên Linux / Windows
 
-Cần Java 17, Maven 3.9+, Node.js 20.19+ hoặc 22.12+, npm và Docker Compose. Giải nén vào thư mục mới, mở terminal (Linux) hoặc Command Prompt/PowerShell (Windows) tại thư mục `lms`.
+Cần Java 17, Maven 3.9+, Node.js 20.19+ hoặc 22.12+, npm và Docker Compose. Giải nén vào thư mục mới, mở terminal tại thư mục `lms`.
 
-Trên Windows, dùng PowerShell hoặc Git Bash nếu đã cài Git; các lệnh `bash scripts/...` và `docker compose` chạy được trong Git Bash hoặc WSL. Nếu dùng Command Prompt nguyên bản, đọc phần **Phương pháp thay thế trên Windows** ở dưới.
+- Linux: mở terminal (bash).
+- Windows: dùng Git Bash (đã cài sẵn khi cài Git for Windows) hoặc WSL để chạy đúng như hướng dẫn dưới đây. Nếu dùng Command Prompt / PowerShell thuần Windows, đọc phần **Windows không dùng Git Bash** ở dưới.
+
+Backend đọc cấu hình từ file `.env` trong thư mục `lms`. Trên Linux/Git Bash/WSL, chạy script `scripts/start-backend.sh` — script này làm 3 việc:
+
+1. Kiểm tra file `.env` có tồn tại không.
+2. Export tất cả biến trong `.env` vào môi trường shell (tương đương `set -a && source .env && set +a`).
+3. `cd` vào thư mục `backend` rồi chạy `mvn spring-boot:run`.
+
+Do đó, chạy backend giống nhau trên Linux và Git Bash/WSL:
 
 ```bash
 cp .env.example .env
@@ -17,6 +26,8 @@ bash scripts/start-backend.sh
 - `cp` (copy) sao chép cấu hình mẫu thành `.env` để bạn chỉnh riêng.
 - `docker compose up -d`: tạo/chạy MySQL; `-d` (detached) chạy nền. Lần đầu Docker nhập `database/init.sql` vào database **learnova_compact**.
 - `bash scripts/start-backend.sh`: nạp biến trong `.env`, chuyển vào backend và chạy `mvn spring-boot:run`. `mvn` là Maven. Giữ terminal này mở.
+
+Command `npm run dev` ở frontend ngang hàng với backend, không đọc `.env`.
 
 Mở terminal thứ hai tại `lms`:
 
@@ -33,41 +44,6 @@ npm run dev
 Nếu cổng 3306 đã có MySQL, đổi mapping trong Compose thành `3307:3306` và đổi cổng trong `DB_URL` thành `3307`. Không cần xóa dữ liệu MySQL đang dùng.
 
 Bản này dùng database và volume riêng. Không nhập SQL mới đè lên database của bản LMS trước. SQL chỉ khởi tạo database mới; chưa kèm migration chuyển dữ liệu từ phiên bản 12 bảng cũ. Hibernate `ddl-auto: update` phục vụ môi trường phát triển.
-
-### Bước nhanh trên Windows khi đã có Git Bash
-
-Nếu đã cài Git for Windows, mở Git Bash tại thư mục `lms` và dùng chính các lệnh trong phần **Chạy cơ bản** ở trên. Git Bash chạy được `bash`, `mvn`, `npm` và `docker compose` như trên Linux.
-
-### Phương pháp thay thế trên Windows (Command Prompt / PowerShell)
-
- Khi không dùng Git Bash, làm theo các bước sau:
-
-- Copy file cấu hình: `copy .env.example .env` (Command Prompt) hoặc `Copy-Item .env.example .env` (PowerShell).
-- Khởi chạy Docker: `docker compose up -d` (cả Command Prompt, PowerShell và Git Bash đều chạy được lệnh này nếu Docker Desktop đang hoạt động).
-- Backend: **Lưu ý:** script `start-backend.sh` bị giới hạn trên Linux/Git Bash; trên Command Prompt/PowerShell 순수 Windows 환경이면 `.env` 파일을 직접 환경변수로 설정한 후 Maven을 실행해야 합니다.
-  - Command Prompt:
-    ```cmd
-    cd backend
-    for /f "delims=" %i in ('type ..\.env') do @set %i
-    mvn spring-boot:run
-    ```
-    (명령 프롬프트에서 배치 파일용 `for` 구문입니다. 단독 실행할 때는 `%i`, 배치 파일 안에서 쓸 때는 `%%i`로 바꿉니다. PowerShell에서는 아래 방법 사용)
-  - PowerShell:
-    ```powershell
-    cd backend
-    Get-Content ..\.env | ForEach-Object {
-      if ($_ -match '\s*#') { return }
-      $name, $value = $_ -split '=', 2
-      if ($name -and $value) { [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim(), "Process")
-    }
-    mvn spring-boot:run
-    ```
-  - Hoặc dùng Git Bash/WSL: `bash scripts/start-backend.sh` (chỉ chạy được trong môi trường đó).
-- Frontend: mở terminal thứ hai, chuyển vào frontend và chạy:
-  - Command Prompt: `cd frontend` → `npm ci` → `npm run dev`
-  - PowerShell/Git Bash: `cd frontend` → `npm ci` → `npm run dev`
-
-Lưu ý: trên Command Prompt, đường dẫn phân cách bằng `\` (ví dụ `cd backend\target`), còn PowerShell và Git Bash dùng `/`. Các lệnh `mvn`, `npm`, `java`, `python`/`python3` cần có trong PATH. Nếu dùng WSL, dùng terminal Linux như bình thường.
 
 ## Tài khoản mẫu
 
@@ -99,7 +75,7 @@ Không có bảng Subject riêng: subject là thuộc tính của question_banks
 ## Google Login và Teacher
 
 1. Tạo OAuth Web Client, khai báo callback chính xác: `http://localhost:8080/login/oauth2/code/google`.
-2. Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` vào `.env`, sau đó khởi động lại backend. `bash scripts/start-backend.sh` (hoặc WSL) tự đọc `.env`. Nếu chạy `mvn spring-boot:run` trực tiếp từ Command Prompt/PowerShell, cần export thủ công các biến trong `.env` trước (xem phần **Phương pháp thay thế trên Windows** ở trên). `java -jar ...` từ thư mục gốc cũng cần biến môi trường được set trước.
+2. Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` vào `.env`, sau đó khởi động lại backend. Script `bash scripts/start-backend.sh` (hoặc chạy thủ công `set -a && source .env && set +a && cd backend && mvn spring-boot:run` trên Linux/Git Bash/WSL) sẽ tự đọc `.env` và export biến vào môi trường trước khi chạy Maven. Backend và `java -jar` đều đọc biến môi trường, không đọc trực tiếp file `.env`.
 3. Đăng ký trong LMS bằng đúng email Google. Chọn Teacher nếu cần tài khoản giáo viên; sau đó đăng xuất và dùng nút Google.
 4. Google chỉ đăng nhập vào tài khoản đã có và giữ vai trò hiện tại, theo mô tả trong DOCX. Email chưa có tài khoản sẽ được yêu cầu đăng ký trước.
 
@@ -140,6 +116,71 @@ mysql -u lms -p learnova_compact < database/migrations/2026-10-30_course_content
 Migration giữ nguyên dữ liệu cũ; lesson cũ có `video_url` được đánh dấu `VIDEO`, còn lại là `TEXT`. Bảng mới không cần tạo: module/lesson dùng lại `modules` và `lessons`, tránh trùng chức năng với Chapter.
 
 Backend chia package `controller`, `dto`, `service`, `entity`, `repository`, `security`, `integration`, `util`, `web`. API quản lý nội dung nằm ở `/api/teacher/**` (kiểm tra role Teacher và quyền sở hữu ở từng thao tác), upload ở `/api/teacher/uploads`, tệp ở `/api/files/**`. SQL ở `database/init.sql`, migration ở `database/migrations`, cấu hình ở `.env.example`, frontend ở `frontend/src`.
+
+### Windows không dùng Git Bash
+
+ Khi không dùng Git Bash/WSL, Docker Compose vẫn chạy được trên Command Prompt/PowerShell (Docker Desktop), nhưng **script `start-backend.sh` không chạy được** vì nó là bash script. Trên Windows thuần, làm theo các bước:
+
+- Copy file cấu hình: `copy .env.example .env` (Command Prompt) hoặc `Copy-Item .env.example .env` (PowerShell).
+- Khởi chạy Docker: `docker compose up -d`.
+- Backend: **Bắt buộc phải export thủ công các biến trong `.env` vào môi trường trước khi chạy Maven**, vì Spring Boot/Maven không tự đọc file `.env`.
+  - Command Prompt (lệnh chạy từng dòng): mở terminal tại thư mục `lms`.
+    ```cmd
+    set DB_URL=jdbc:mysql://localhost:3306/learnova_compact?createDatabaseIfNotExist=true
+    set DB_USER=lms
+    set DB_PASSWORD=lms
+    set FRONTEND_URL=http://localhost:5173
+    set GOOGLE_CLIENT_ID=...
+    set GOOGLE_CLIENT_SECRET=...
+    set GEMINI_API_KEY=...
+    set GEMINI_MODEL=gemini-2.5-flash
+    set UPLOAD_DIR=uploads
+    set DEMO_DATA=true
+    cd backend
+    mvn spring-boot:run
+    ```
+    (Gõ từng `set VAR=value` rồi Enter, hoặc viết vào file batch `start-backend.bat` trong thư mục `lms`:
+    ```cmd
+    @echo off
+    cd /d "%~dp0"
+    for /f "usebackq delims=" %%i in (`findstr /v /r "^\s*$\) back to set /p "%%i" do @set "%%i"
+    cd backend
+    call mvn spring-boot:run
+    ```
+    rồi chạy `start-backend.bat`. Lưu ý: lệnh `for /f` trên cần điều chỉnh để bỏ comment `#` và dòng trống; cách简单是 gõ thủ công hoặc chỉnh sửa batch file theo config thực tế của bạn.)
+  - PowerShell (lệnh chạy từng dòng): mở terminal tại thư mục `lms`.
+    ```powershell
+    $env:DB_URL = "jdbc:mysql://localhost:3306/learnova_compact?createDatabaseIfNotExist=true"
+    $env:DB_USER = "lms"
+    $env:DB_PASSWORD = "lms"
+    $env:FRONTEND_URL = "http://localhost:5173"
+    $env:GOOGLE_CLIENT_ID = "..."
+    $env:GOOGLE_CLIENT_SECRET = "..."
+    $env:GEMINI_API_KEY = "..."
+    $env:GEMINI_MODEL = "gemini-2.5-flash"
+    $env:UPLOAD_DIR = "uploads"
+    $env:DEMO_DATA = "true"
+    cd backend
+    mvn spring-boot:run
+    ```
+    (Gõ từng `$env:VAR = "value"` rồi Enter, hoặc tạo file `start-backend.ps1`:
+    ```powershell
+    Set-Location "$PSScriptRoot"
+    Get-Content .env | ForEach-Object {
+      if ($_ -match '\s*#') { return }
+      $name, $value = $_ -split '=', 2
+      if ($name -and $value) { $env:($name.Trim()) = $value.Trim() }
+    }
+    Set-Location backend
+    & mvn spring-boot:run
+    ```
+    rồi chạy `.\start-backend.ps1`.)
+  - Hoặc dùng Git Bash/WSL: chạy `bash scripts/start-backend.sh` như trên Linux.
+- Frontend: mở terminal thứ hai tại `lms`, chạy:
+  - Command Prompt: `cd frontend` → `npm ci` → `npm run dev`
+  - PowerShell/Git Bash: `cd frontend` → `npm ci` → `npm run dev`
+
+Lưu ý: trên Command Prompt, đường dẫn phân cách bằng `\` (ví dụ `cd backend\target`), còn PowerShell và Git Bash dùng `/`. Các lệnh `mvn`, `npm`, `java`, `python`/`python3` cần có trong PATH. Nếu dùng WSL, dùng terminal Linux như bình thường.
 
 ### Cấu trúc sau refactor
 
@@ -254,3 +295,5 @@ API_BASE=http://127.0.0.1:8080/api python3 scripts/content_test.py
 ```
 
 (Git Bash/PowerShell).
+
+Chú ý: trên Windows Command Prompt, gán biến môi trường cho lệnh python cần dùng `set VAR=value && python ...` (một dòng), không dùng `VAR=value python ...` như Linux/Git Bash.
