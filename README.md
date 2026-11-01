@@ -44,10 +44,25 @@ Nếu đã cài Git for Windows, mở Git Bash tại thư mục `lms` và dùng 
 
 - Copy file cấu hình: `copy .env.example .env` (Command Prompt) hoặc `Copy-Item .env.example .env` (PowerShell).
 - Khởi chạy Docker: `docker compose up -d` (cả Command Prompt, PowerShell và Git Bash đều chạy được lệnh này nếu Docker Desktop đang hoạt động).
-- Backend: mở terminal, chuyển vào thư mục backend và chạy:
-  - Command Prompt: `cd backend` → `mvn spring-boot:run`
-  - PowerShell/Git Bash: `cd backend` → `mvn spring-boot:run`
-  - Hoặc dùng script Giả lập Bash: `bash scripts/start-backend.sh` (chỉ chạy được trong Git Bash hoặc WSL).
+- Backend: **Lưu ý:** script `start-backend.sh` bị giới hạn trên Linux/Git Bash; trên Command Prompt/PowerShell 순수 Windows 환경이면 `.env` 파일을 직접 환경변수로 설정한 후 Maven을 실행해야 합니다.
+  - Command Prompt:
+    ```cmd
+    cd backend
+    for /f "delims=" %i in ('type ..\.env') do @set %i
+    mvn spring-boot:run
+    ```
+    (명령 프롬프트에서 배치 파일용 `for` 구문입니다. 단독 실행할 때는 `%i`, 배치 파일 안에서 쓸 때는 `%%i`로 바꿉니다. PowerShell에서는 아래 방법 사용)
+  - PowerShell:
+    ```powershell
+    cd backend
+    Get-Content ..\.env | ForEach-Object {
+      if ($_ -match '\s*#') { return }
+      $name, $value = $_ -split '=', 2
+      if ($name -and $value) { [Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim(), "Process")
+    }
+    mvn spring-boot:run
+    ```
+  - Hoặc dùng Git Bash/WSL: `bash scripts/start-backend.sh` (chỉ chạy được trong môi trường đó).
 - Frontend: mở terminal thứ hai, chuyển vào frontend và chạy:
   - Command Prompt: `cd frontend` → `npm ci` → `npm run dev`
   - PowerShell/Git Bash: `cd frontend` → `npm ci` → `npm run dev`
@@ -84,7 +99,7 @@ Không có bảng Subject riêng: subject là thuộc tính của question_banks
 ## Google Login và Teacher
 
 1. Tạo OAuth Web Client, khai báo callback chính xác: `http://localhost:8080/login/oauth2/code/google`.
-2. Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` vào `.env`, sau đó khởi động lại backend. `mvn spring-boot:run` từ thư mục `backend`, `java -jar ...` từ thư mục gốc và `scripts/start-backend.sh` đều tự đọc `.env`; không cần chạy `source ../.env` thủ công.
+2. Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` vào `.env`, sau đó khởi động lại backend. `bash scripts/start-backend.sh` (hoặc WSL) tự đọc `.env`. Nếu chạy `mvn spring-boot:run` trực tiếp từ Command Prompt/PowerShell, cần export thủ công các biến trong `.env` trước (xem phần **Phương pháp thay thế trên Windows** ở trên). `java -jar ...` từ thư mục gốc cũng cần biến môi trường được set trước.
 3. Đăng ký trong LMS bằng đúng email Google. Chọn Teacher nếu cần tài khoản giáo viên; sau đó đăng xuất và dùng nút Google.
 4. Google chỉ đăng nhập vào tài khoản đã có và giữ vai trò hiện tại, theo mô tả trong DOCX. Email chưa có tài khoản sẽ được yêu cầu đăng ký trước.
 
