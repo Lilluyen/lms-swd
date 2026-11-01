@@ -2,9 +2,11 @@
 
 React + Vite + Ant Design + Lucide; Spring Boot 3.5.6, Java 17, Spring Security, JPA; MySQL 8.4. Giao diện tiếng Việt và tách quyền Guest, Teacher, Student.
 
-## Chạy trên Linux Mint
+## Chạy trên Linux / Windows
 
-Cần Java 17, Maven 3.9+, Node.js 20.19+ hoặc 22.12+, npm và Docker Compose. Giải nén vào thư mục mới, mở terminal tại thư mục `lms`.
+Cần Java 17, Maven 3.9+, Node.js 20.19+ hoặc 22.12+, npm và Docker Compose. Giải nén vào thư mục mới, mở terminal (Linux) hoặc Command Prompt/PowerShell (Windows) tại thư mục `lms`.
+
+Trên Windows, dùng PowerShell hoặc Git Bash nếu đã cài Git; các lệnh `bash scripts/...` và `docker compose` chạy được trong Git Bash hoặc WSL. Nếu dùng Command Prompt nguyên bản, đọc phần **Phương pháp thay thế trên Windows** ở dưới.
 
 ```bash
 cp .env.example .env
@@ -31,6 +33,26 @@ npm run dev
 Nếu cổng 3306 đã có MySQL, đổi mapping trong Compose thành `3307:3306` và đổi cổng trong `DB_URL` thành `3307`. Không cần xóa dữ liệu MySQL đang dùng.
 
 Bản này dùng database và volume riêng. Không nhập SQL mới đè lên database của bản LMS trước. SQL chỉ khởi tạo database mới; chưa kèm migration chuyển dữ liệu từ phiên bản 12 bảng cũ. Hibernate `ddl-auto: update` phục vụ môi trường phát triển.
+
+### Bước nhanh trên Windows khi đã có Git Bash
+
+Nếu đã cài Git for Windows, mở Git Bash tại thư mục `lms` và dùng chính các lệnh trong phần **Chạy cơ bản** ở trên. Git Bash chạy được `bash`, `mvn`, `npm` và `docker compose` như trên Linux.
+
+### Phương pháp thay thế trên Windows (Command Prompt / PowerShell)
+
+ Khi không dùng Git Bash, làm theo các bước sau:
+
+- Copy file cấu hình: `copy .env.example .env` (Command Prompt) hoặc `Copy-Item .env.example .env` (PowerShell).
+- Khởi chạy Docker: `docker compose up -d` (cả Command Prompt, PowerShell và Git Bash đều chạy được lệnh này nếu Docker Desktop đang hoạt động).
+- Backend: mở terminal, chuyển vào thư mục backend và chạy:
+  - Command Prompt: `cd backend` → `mvn spring-boot:run`
+  - PowerShell/Git Bash: `cd backend` → `mvn spring-boot:run`
+  - Hoặc dùng script Giả lập Bash: `bash scripts/start-backend.sh` (chỉ chạy được trong Git Bash hoặc WSL).
+- Frontend: mở terminal thứ hai, chuyển vào frontend và chạy:
+  - Command Prompt: `cd frontend` → `npm ci` → `npm run dev`
+  - PowerShell/Git Bash: `cd frontend` → `npm ci` → `npm run dev`
+
+Lưu ý: trên Command Prompt, đường dẫn phân cách bằng `\` (ví dụ `cd backend\target`), còn PowerShell và Git Bash dùng `/`. Các lệnh `mvn`, `npm`, `java`, `python`/`python3` cần có trong PATH. Nếu dùng WSL, dùng terminal Linux như bình thường.
 
 ## Tài khoản mẫu
 
@@ -175,24 +197,45 @@ cd ../frontend
 npm run build
 ```
 
-`mvn package` biên dịch và đóng gói JAR; `npm run build` tạo bản frontend production trong `dist`.
+`mvn package` biên dịch và đóng gói JAR; `npm run build` tạo bản frontend production trong `dist`. Trên Windows, mở terminal tại `lms` và chạy `cd backend` rồi `mvn package`, sau đó `cd ..\frontend` rồi `npm run build` (Command Prompt) hoặc giữ nguyên `cd ../frontend` (Git Bash/PowerShell).
 
 Kiểm thử API sử dụng H2 ở chế độ MySQL, không tác động dữ liệu MySQL thật. Từ thư mục `lms`, sau khi build JAR:
+
+```bash
+set SEPAY_WEBHOOK_KEY=test-webhook-key && set SEPAY_ACCOUNT_NUMBER=123456789 && set SEPAY_BANK_CODE=MB
+java -jar backend\target\lms-0.1.0.jar --spring.profiles.active=smoke
+```
+
+(Command Prompt trên Windows) hoặc:
 
 ```bash
 SEPAY_WEBHOOK_KEY=test-webhook-key SEPAY_ACCOUNT_NUMBER=123456789 SEPAY_BANK_CODE=MB java -jar backend/target/lms-0.1.0.jar --spring.profiles.active=smoke
 ```
 
-`java -jar` chạy gói Java; profile `smoke` dùng database trong RAM và xóa dữ liệu khi tắt. Mở terminal thứ hai tại `lms`:
+(Git Bash/PowerShell). `java -jar` chạy gói Java; profile `smoke` dùng database trong RAM và xóa dữ liệu khi tắt. Mở terminal thứ hai tại `lms`:
+
+```bash
+set API_BASE=http://127.0.0.1:8080/api && python scripts\regression_test.py
+```
+
+(Command Prompt trên Windows) hoặc:
 
 ```bash
 API_BASE=http://127.0.0.1:8080/api python3 scripts/regression_test.py
 ```
 
-`API_BASE` chọn địa chỉ API; script kiểm tra auth/logout, quyền sở hữu, rollback dữ liệu sai, ẩn đáp án trước nộp, chấm bài, lịch sử, tiến độ, webhook và lỗi khi chưa cấu hình Gemini. Xem `TEST_REPORT.md` để biết phạm vi đã kiểm thử.
+(Git Bash/PowerShell). `API_BASE` chọn địa chỉ API; script kiểm tra auth/logout, quyền sở hữu, rollback dữ liệu sai, ẩn đáp án trước nộp, chấm bài, lịch sử, tiến độ, webhook và lỗi khi chưa cấu hình Gemini. Xem `TEST_REPORT.md` để biết phạm vi đã kiểm thử.
 
 Kiểm thử riêng cho quản lý nội dung (danh sách/lọc/phân trang, quyền sở hữu, kéo thả thứ tự, cascade module, ba loại lesson, upload ảnh/tệp, validation AI và thiếu API key):
 
 ```bash
+set API_BASE=http://127.0.0.1:8080/api && python scripts\content_test.py
+```
+
+(Command Prompt trên Windows) hoặc:
+
+```bash
 API_BASE=http://127.0.0.1:8080/api python3 scripts/content_test.py
 ```
+
+(Git Bash/PowerShell).
