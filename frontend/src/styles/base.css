@@ -1,0 +1,132 @@
+/* ============================================================
+   Learnova — Neo-brutalist poster
+   Paper canvas, 2px ink outlines, hard offset shadows, acid accent.
+   ============================================================ */
+
+:root {
+  /* Paper */
+  --paper: #f5f2e8;
+  --paper-2: #efeade;
+  --paper-3: #e5ddc8;
+  --card: #fffdf6;
+
+  /* Ink */
+  --ink: #111111;
+  --ink-2: #2c2a24;
+  --ink-3: #5b5749;
+  --ink-4: #8b8474;
+
+  /* Accents */
+  --acid: #dcf24a;
+  --acid-deep: #c8e02f;
+  --red: #ff4b2b;
+  --blue: #2547ff;
+  --success: #1f7a3d;
+  --danger: #d92d12;
+
+  /* Type */
+  --display: "Bricolage Grotesque", "Be Vietnam Pro", system-ui, sans-serif;
+  --sans: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Geometry */
+  --r: 0px;
+  --r-sm: 2px;
+  --hard: 5px 5px 0 var(--ink);
+  --hard-sm: 3px 3px 0 var(--ink);
+  --hard-acid: 5px 5px 0 var(--acid);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --fast: 110ms;
+  --base: 160ms;
+
+  color-scheme: light;
+  font-family: var(--sans);
+  color: var(--ink-2);
+  background: var(--paper);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  background-image: radial-gradient(
+    rgba(17, 17, 17, 0.055) 1px,
+    transparent 1px
+  );
+  background-size: 18px 18px;
+}
+
+body::before {
+  content: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+b,
+strong {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+::selection {
+  background: var(--acid);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) var(--paper-2);
+}
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border: 3px solid var(--paper);
+}
+*::-webkit-scrollbar-track {
+  background: var(--paper-2);
+}
+

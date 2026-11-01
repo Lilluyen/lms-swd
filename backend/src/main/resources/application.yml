@@ -1,0 +1,44 @@
+spring:
+  # Spring Boot does not load dotenv files by default. These optional imports
+  # support both common launch directories:
+  #   backend/ -> ../.env (mvn spring-boot:run)
+  #   project root -> ./.env (java -jar backend/target/...jar)
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/learnova_compact?createDatabaseIfNotExist=true}
+    username: ${DB_USER:lms}
+    password: ${DB_PASSWORD:lms}
+  jpa:
+    hibernate.ddl-auto: update
+    open-in-view: false
+  security.oauth2.client.registration.google:
+    client-id: ${GOOGLE_CLIENT_ID:placeholder}
+    client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+    scope: openid,profile,email
+  servlet.multipart:
+    max-file-size: 26MB
+    max-request-size: 30MB
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+server.port: 8080
+app:
+  demo-data: ${DEMO_DATA:false}
+  upload-dir: ${UPLOAD_DIR:uploads}
+  frontend: ${FRONTEND_URL:http://localhost:5173}
+  sepay:
+    token: ${SEPAY_API_TOKEN:}
+    account: ${SEPAY_ACCOUNT_NUMBER:}
+    bank: ${SEPAY_BANK_CODE:}
+    webhook-key: ${SEPAY_WEBHOOK_KEY:}
+    account-name: ${SEPAY_ACCOUNT_NAME:}
+  gemini:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:45}

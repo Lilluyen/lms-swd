@@ -1,0 +1,246 @@
+/* ============================================================
+   Drafts, payment, lesson
+   ============================================================ */
+
+.draft,
+.payment-card {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 16px;
+  margin: 14px 0;
+}
+
+.draft p {
+  color: var(--ink-2);
+  font-size: 12px;
+  margin: 10px 0;
+}
+
+.draft > .ant-btn {
+  margin-left: 8px;
+}
+
+.payment-card h2 {
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.payment-heading,
+.payment-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.payment-status {
+  padding: 7px 10px;
+  background: var(--acid);
+  border: 2px solid var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.payment-paid .payment-status {
+  color: #fff;
+  background: var(--green, #1f7a3d);
+}
+
+.payment-underpaid .payment-status,
+.payment-late_payment .payment-status {
+  background: #ffd9d0;
+}
+
+.payment-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 22px;
+  margin: 16px 0;
+}
+
+.payment-layout > img {
+  width: 210px;
+  height: 210px;
+  object-fit: contain;
+  display: block;
+  margin: 0;
+  padding: 6px;
+  background: #fff;
+  border: 2px solid var(--ink);
+}
+
+.payment-details {
+  display: grid;
+  align-content: start;
+}
+
+.payment-details > div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+}
+
+.payment-details span {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.payment-details strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.payment-code strong {
+  color: var(--purple);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+.copy-button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+
+.payment-footer {
+  padding-top: 12px;
+  border-top: 2px solid var(--ink);
+}
+
+.payment-footer p {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.outline.danger {
+  color: var(--red, #b42318);
+}
+
+.payment-message {
+  padding: 12px;
+  margin: 0;
+  background: var(--paper-2);
+  border-left: 4px solid var(--ink);
+}
+
+.course-reviews {
+  margin-top: 34px;
+}
+
+.review-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--purple);
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.review-form {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+}
+
+.review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.review-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+}
+
+.review-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--purple);
+  border: 2px solid var(--ink);
+  font-weight: 900;
+}
+
+.review-item-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-item-heading span {
+  color: var(--purple);
+  letter-spacing: 0.08em;
+}
+
+.review-item p {
+  margin-top: 5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+.video {
+  padding: 16px;
+  background: var(--acid);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+}
+
+.video a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.video a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lesson-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--card);
+  padding: 22px;
+  margin-top: 14px;
+  line-height: 1.75;
+  border-radius: 0;
+  border: 2px solid var(--ink);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+

@@ -1,0 +1,148 @@
+package com.example.lms.service;
+
+import com.example.lms.entity.*;
+import com.example.lms.entity.Module;
+import com.example.lms.repository.*;
+import java.math.BigDecimal;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+@Component
+@ConditionalOnProperty(name = "app.demo-data", havingValue = "true")
+public class DemoData implements CommandLineRunner {
+
+  @Autowired
+  UserRepo users;
+
+  @Autowired
+  CourseRepo courses;
+
+  @Autowired
+  ModuleRepo modules;
+
+  @Autowired
+  LessonRepo lessons;
+
+  @Autowired
+  QuestionRepo questions;
+
+  @Autowired
+  AnswerRepo answers;
+
+  @Autowired
+  QuizRepo quizzes;
+
+  @Autowired
+  QuizQuestionRepo links;
+
+  @Autowired
+  PasswordEncoder encoder;
+
+  @Autowired
+  SupportService support;
+
+  @Override
+  @Transactional
+  public void run(String... args) {
+    if (users.findByEmail("teacher@learnova.local").isPresent()) return;
+    User t = new User();
+    t.name = "Giáo viên Learnova";
+    t.email = "teacher@learnova.local";
+    t.passwordHash = encoder.encode("Learnova@123");
+    t.role = "TEACHER";
+    t.roleDefinition = support.role(t.role);
+    users.save(t);
+    User student = new User();
+    student.name = "Học viên Learnova";
+    student.email = "student@learnova.local";
+    student.passwordHash = encoder.encode("Learnova@123");
+    student.roleDefinition = support.role(student.role);
+    users.save(student);
+    String[] titles = {
+      "Java căn bản cho người mới bắt đầu",
+      "Thiết kế giao diện với React",
+      "Cơ sở dữ liệu và tư duy SQL",
+    };
+    String[] subjects = {
+      "Lập trình Java",
+      "React & Frontend",
+      "Cơ sở dữ liệu",
+    };
+    String[] descriptions = {
+      "Làm quen với biến, kiểu dữ liệu và tư duy hướng đối tượng qua các bài tập Java thực tế.",
+      "Xây dựng giao diện từ component, quản lý state và thiết kế trải nghiệm học tập trực quan.",
+      "Hiểu mô hình quan hệ, khóa chính và viết truy vấn SQL để khai thác dữ liệu hiệu quả.",
+    };
+    for (int i = 0; i < titles.length; i++) {
+      Course c = new Course();
+      c.title = titles[i];
+      c.description = descriptions[i];
+      c.category = subjects[i];
+      c.categoryDefinition = support.category(c.category);
+      c.teacher = t;
+      c.price = i == 2 ? new BigDecimal("199000") : BigDecimal.ZERO;
+      c.published = true;
+      courses.save(c);
+      Module m = new Module();
+      m.course = c;
+      m.title = "Bắt đầu hành trình";
+      m.position = 1;
+      modules.save(m);
+      Lesson l = new Lesson();
+      l.module = m;
+      l.title = "Giới thiệu và mục tiêu học tập";
+      l.position = 1;
+      l.content =
+        descriptions[i] +
+        "\n\nMục tiêu\n• Nắm được các khái niệm nền tảng.\n• Thực hành qua ví dụ đơn giản.\n• Tự kiểm tra kiến thức bằng bài quiz.\n\nĐây là bài học mẫu để bạn thử luồng ghi danh và theo dõi tiến độ.";
+      lessons.save(l);
+      Question q = new Question();
+      q.teacher = t;
+      q.subject = subjects[i];
+      q.bank = support.bank(t, q.subject);
+      q.content = new String[] {
+        "Kiểu dữ liệu nào lưu số nguyên trong Java?",
+        "Hook nào quản lý state trong React?",
+        "Khóa chính dùng để làm gì?",
+      }[i];
+      q.difficulty = "EASY";
+      q.explanation = new String[] {
+        "int là kiểu dữ liệu số nguyên 32 bit.",
+        "useState lưu state và cung cấp hàm cập nhật state.",
+        "Khóa chính định danh duy nhất mỗi bản ghi trong bảng.",
+      }[i];
+      questions.save(q);
+      String[][] opts = {
+        { "int", "boolean", "String", "void" },
+        { "useState", "useEffect", "useRef", "useMemo" },
+        {
+          "Định danh duy nhất bản ghi",
+          "Sắp xếp bảng",
+          "Xóa dữ liệu",
+          "Tạo biểu đồ",
+        },
+      };
+      for (int n = 0; n < 4; n++) {
+        Answer a = new Answer();
+        a.question = q;
+        a.content = opts[i][n];
+        a.correct = n == 0;
+        answers.save(a);
+      }
+      Quiz quiz = new Quiz();
+      quiz.title = "Ôn tập: " + subjects[i];
+      quiz.subject = subjects[i];
+      quiz.owner = t;
+      quiz.durationMinutes = 10;
+      quizzes.save(quiz);
+      QuizQuestion link = new QuizQuestion();
+      link.quiz = quiz;
+      link.question = q;
+      links.save(link);
+    }
+  }
+}

@@ -1,0 +1,14 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: learnova_compact
+      MYSQL_USER: lms
+      MYSQL_PASSWORD: lms
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports: ["3306:3306"]
+    volumes:
+      - learnova_compact_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+volumes:
+  learnova_compact_data:

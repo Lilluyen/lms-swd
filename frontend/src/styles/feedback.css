@@ -1,0 +1,78 @@
+/* ============================================================
+   Feedback
+   ============================================================ */
+
+.busy-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ink) 0 12px,
+    var(--acid) 12px 24px
+  );
+  background-size: 24px 100%;
+  animation: progress 0.6s linear infinite;
+  z-index: 2000;
+  font-size: 0;
+  color: transparent;
+  overflow: hidden;
+}
+
+@keyframes progress {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 24px 0;
+  }
+}
+
+.alert {
+  border-radius: 0;
+  border: 2px solid var(--ink);
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.alert svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.alert.error {
+  color: var(--ink);
+  background: #ffd9d1;
+  box-shadow: var(--hard-sm);
+}
+
+.alert.good {
+  color: var(--ink);
+  background: var(--acid);
+  box-shadow: var(--hard-sm);
+}
+
+.empty {
+  padding: 36px;
+  text-align: center;
+  background: var(--card);
+  border: 2px dashed var(--ink);
+  border-radius: 0;
+  color: var(--ink-3);
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+}
+
+.course-grid > .empty {
+  border: 0;
+}
+

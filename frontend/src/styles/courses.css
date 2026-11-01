@@ -1,0 +1,415 @@
+/* ============================================================
+   Courses — visual card grid
+   ============================================================ */
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.course-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  min-height: 390px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  color: inherit;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: var(--hard-sm);
+  transition:
+    transform var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.course-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--hard);
+}
+
+.course-card:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 3px;
+}
+
+.course-cover {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--paper-2);
+  border-bottom: 2px solid var(--ink);
+}
+
+.course-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--base) var(--ease);
+}
+
+.course-card:hover .course-cover img {
+  transform: scale(1.035);
+}
+
+.cover0 {
+  background: var(--acid);
+}
+.cover1 {
+  background: #ffd9d0;
+}
+.cover2 {
+  background: #d7e5ff;
+}
+
+.cover-index {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.cover-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  max-width: calc(100% - 64px);
+  padding: 5px 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cover-open {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+}
+
+.course-glyph,
+.cover-glyph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--ink);
+}
+
+.cover-glyph svg {
+  width: 48px;
+  height: 48px;
+  stroke-width: 1.5;
+}
+
+.course-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 9px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.course-card-body .kicker {
+  font-size: 10px;
+}
+
+.course-card h3 {
+  min-width: 0;
+  margin: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.course-card p {
+  display: -webkit-box;
+  min-height: 3.2em;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+.course-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  color: #a35c00;
+  font-size: 12px;
+}
+
+.course-rating span:last-child {
+  color: var(--ink-3);
+}
+
+.course-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.course-footer b {
+  color: var(--purple);
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Course detail
+   ============================================================ */
+
+.course-hero {
+  position: relative;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 22px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  box-shadow: var(--hard);
+}
+
+.course-hero::after {
+  content: none;
+}
+
+.course-hero > div:first-child {
+  max-width: 660px;
+  position: relative;
+  z-index: 1;
+}
+
+.course-hero h1 {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  margin: 8px 0 10px;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.course-hero p {
+  line-height: 1.6;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 14px 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.course-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.course-meta svg {
+  color: var(--ink);
+  stroke-width: 2;
+}
+
+.course-illustration {
+  flex-shrink: 0;
+  width: min(38%, 360px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  box-shadow: var(--hard-sm);
+}
+
+.course-illustration img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.wishlist {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.wishlist.active {
+  color: #fff;
+  background: var(--purple);
+}
+
+/* ---------- Modules ---------- */
+
+.module-list {
+  display: grid;
+  gap: 10px;
+}
+
+.module-card {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 14px 16px;
+  transition:
+    transform var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.module-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--hard-sm);
+}
+
+.module-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.module-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.module-heading b {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.module-index {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--acid);
+  border: 2px solid var(--ink);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.lesson {
+  border-top: 1px solid var(--ink);
+  margin-top: 10px;
+  padding-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.lesson > svg {
+  color: var(--ink-3);
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.lesson span {
+  flex: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  transition: color var(--fast) var(--ease);
+}
+
+.lesson span:hover {
+  color: var(--red);
+}
+
+.inline-add {
+  margin-top: 10px;
+  font-size: 10px;
+}
+
+.icon-btn {
+  background: none;
+  border: 2px solid transparent;
+  color: var(--ink-3);
+  padding: 4px;
+  border-radius: 0;
+  display: inline-grid;
+  place-items: center;
+  transition:
+    color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--acid);
+}
+

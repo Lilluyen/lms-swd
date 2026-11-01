@@ -1,0 +1,24 @@
+{
+  "discovery": {
+    "includeGlobs": [
+      "backend/src/**/*.java",
+      "backend/src/**/*.yml",
+      "frontend/src/**/*.js",
+      "frontend/src/**/*.jsx",
+      "frontend/src/**/*.css",
+      "database/**/*.sql",
+      "scripts/**/*.py",
+      "*.md",
+      "*.yml",
+      "*.yaml",
+      "*.json"
+    ],
+    "ignoreGlobs": [
+      ".agents/**",
+      ".codex/**",
+      "uploads/**",
+      "frontend/public/**"
+    ],
+    "useGitignore": true
+  }
+}
