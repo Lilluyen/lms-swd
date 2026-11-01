@@ -14,6 +14,7 @@ export function QuestionDraftList({
   onSave,
   saving,
 }) {
+  console.log(drafts);
   return (
     <section className="question-ai-results" aria-labelledby="draft-title">
       <div className="results-head">
@@ -39,7 +40,8 @@ export function QuestionDraftList({
           <Sparkles size={28} />
           <h3>Chưa có bản nháp</h3>
           <p>
-            Điền tiêu chí và nội dung bài học, sau đó bấm “Tạo bản nháp câu hỏi”.
+            Điền tiêu chí và nội dung bài học, sau đó bấm “Tạo bản nháp câu
+            hỏi”.
           </p>
         </div>
       ) : (
@@ -74,7 +76,9 @@ export function QuestionDraftList({
               <Input.TextArea
                 autoSize={{ minRows: 2, maxRows: 5 }}
                 value={draft.content}
-                onChange={(e) => onUpdateDraft(index, { content: e.target.value })}
+                onChange={(e) =>
+                  onUpdateDraft(index, { content: e.target.value })
+                }
               />
             </Field>
             <div className="draft-answers">
@@ -96,6 +100,12 @@ export function QuestionDraftList({
                   />
                   <span>{String.fromCharCode(65 + answerIndex)}</span>
                   <Input
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      padding: "10px",
+                      flex: 1,
+                    }}
                     value={answer.content}
                     onChange={(e) =>
                       onUpdateDraft(index, {
