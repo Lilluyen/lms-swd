@@ -246,16 +246,40 @@
 }
 
 .teacher-course-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 8px;
   padding: 12px;
   border-top: 2px solid var(--ink);
   background: var(--paper-2);
 }
 
+.teacher-course-actions .btn-manage-content,
+.teacher-course-actions .ant-btn-primary {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  font-family: var(--sans) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px !important;
+}
+
 .teacher-course-actions .ant-btn {
-  min-height: 42px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  text-transform: none;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 .teacher-course-pagination {

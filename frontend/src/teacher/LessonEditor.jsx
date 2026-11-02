@@ -8,15 +8,13 @@ import { LessonBodyFields } from "./LessonBodyFields";
 
 export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel }) {
   const [course, setCourse] = useState(null);
-  const [modules, setModules] = useState([]);
+  const [module, setModule] = useState(null);
   const [form, setForm] = useState({
-    moduleId: moduleId || null,
     title: "",
     contentType: "TEXT",
     content: "",
     videoUrl: "",
-    durationMinutes: null,
-    position: 1,
+    durationMinutes: 10,
     fileUrl: "",
     fileName: "",
   });
@@ -30,32 +28,27 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
     let alive = true;
     (async () => {
       try {
-        const detail = await api(`/teacher/courses/${courseId}`);
+        const c = await api(`/teacher/courses/${courseId}/modules`);
         if (!alive) return;
-        setCourse(detail);
-        const mods = (detail.content || []).map((x) => x.module);
-        setModules(mods);
-        const current = mods.find((m) => m.id === moduleId);
+        setCourse(c.course);
+        const m = (c.modules || []).find((x) => x.id === moduleId);
+        setModule(m || null);
+
         if (lessonId) {
-          const list = await api(`/teacher/modules/${moduleId}/lessons`);
-          const l = (list.lessons || []).find((x) => x.id === lessonId);
-          if (l) {
-            if (!alive) return;
+          const r = await api(`/teacher/modules/${moduleId}/lessons`);
+          if (!alive) return;
+          const found = (r.lessons || []).find((x) => x.id === lessonId);
+          if (found) {
             setForm({
-              moduleId: l.moduleId,
-              title: l.title || "",
-              contentType: l.contentType || "TEXT",
-              content: l.content || "",
-              videoUrl: l.videoUrl || "",
-              durationMinutes: l.durationMinutes ?? null,
-              position: l.position || 1,
-              fileUrl: l.fileUrl || "",
-              fileName: l.fileName || "",
+              title: found.title || "",
+              contentType: found.contentType || "TEXT",
+              content: found.content || "",
+              videoUrl: found.videoUrl || "",
+              durationMinutes: Number(found.durationMinutes || 10),
+              fileUrl: found.fileUrl || "",
+              fileName: found.fileName || "",
             });
           }
-        } else {
-          const count = current?.lessonCount || 0;
-          setForm((f) => ({ ...f, position: count + 1, moduleId }));
         }
       } catch (e) {
         message.error(e.message);
@@ -75,31 +68,28 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
 
   const validate = () => {
     const e = {};
-    if (!form.moduleId) e.moduleId = "Vui lòng chọn module";
-    const t = form.title.trim();
-    if (t.length < 3 || t.length > 150)
-      e.title = "Tiêu đề bài học phải từ 3 đến 150 ký tự";
-    if (!form.contentType) e.contentType = "Vui lòng chọn loại nội dung";
-    if (
-      form.durationMinutes !== null &&
-      form.durationMinutes !== undefined &&
-      (form.durationMinutes < 1 || form.durationMinutes > 600)
-    )
+    const title = form.title.trim();
+    if (title.length < 3 || title.length > 100)
+      e.title = "Tên bài học phải từ 3 đến 100 ký tự";
+    if (!["TEXT", "VIDEO", "FILE"].includes(form.contentType))
+      e.contentType = "Vui lòng chọn loại bài học";
+    const dur = Number(form.durationMinutes);
+    if (!Number.isInteger(dur) || dur < 1 || dur > 600)
       e.durationMinutes = "Thời lượng phải từ 1 đến 600 phút";
-    if (!Number.isInteger(Number(form.position)) || Number(form.position) < 1)
-      e.position = "Thứ tự phải là số nguyên từ 1";
+
     if (form.contentType === "TEXT") {
       const c = form.content.trim();
       if (c.length < 10 || c.length > 10000)
-        e.content = "Nội dung phải từ 10 đến 10.000 ký tự";
+        e.content = "Nội dung bài học phải từ 10 đến 10.000 ký tự";
+    } else if (form.contentType === "VIDEO") {
+      const u = form.videoUrl.trim();
+      if (!u) e.videoUrl = "Vui lòng nhập liên kết video";
+      else if (u.length > 500) e.videoUrl = "Liên kết video tối đa 500 ký tự";
+      else if (!/^https?:\/\//i.test(u))
+        e.videoUrl = "Liên kết video phải bắt đầu bằng http:// hoặc https://";
+    } else if (form.contentType === "FILE") {
+      if (!form.fileUrl) e.fileUrl = "Vui lòng tải lên tệp bài học";
     }
-    if (form.contentType === "VIDEO") {
-      if (!form.videoUrl.trim()) e.videoUrl = "Vui lòng nhập URL video";
-      else if (!/^https?:\/\/\S+$/.test(form.videoUrl.trim()))
-        e.videoUrl = "URL không hợp lệ (phải bắt đầu bằng http:// hoặc https://)";
-    }
-    if (form.contentType === "FILE" && !form.fileUrl)
-      e.fileUrl = "Vui lòng tải lên tệp bài học";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -109,20 +99,22 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
     setSaving(true);
     try {
       const payload = {
-        moduleId: form.moduleId,
         title: form.title.trim(),
         contentType: form.contentType,
-        content: form.contentType === "TEXT" ? form.content : "",
-        videoUrl: form.contentType === "VIDEO" ? form.videoUrl.trim() : "",
-        durationMinutes: form.durationMinutes ?? null,
-        position: Number(form.position),
+        durationMinutes: Number(form.durationMinutes),
+        content: form.contentType === "TEXT" ? form.content.trim() : null,
+        videoUrl: form.contentType === "VIDEO" ? form.videoUrl.trim() : null,
         fileUrl: form.contentType === "FILE" ? form.fileUrl : null,
         fileName: form.contentType === "FILE" ? form.fileName : null,
       };
-      if (lessonId) await put(`/teacher/lessons/${lessonId}`, payload);
-      else await post(`/teacher/modules/${form.moduleId}/lessons`, payload);
-      message.success("Đã lưu bài học thành công");
-      onDone(form.moduleId);
+      if (lessonId) {
+        await put(`/teacher/lessons/${lessonId}`, payload);
+        message.success("Đã cập nhật bài học");
+      } else {
+        await post(`/teacher/modules/${moduleId}/lessons`, payload);
+        message.success("Đã thêm bài học");
+      }
+      onDone();
     } catch (e) {
       const fields = errorsOf(e);
       if (fields) setErrors(fields);
@@ -135,13 +127,17 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
   const pickFile = async (file) => {
     setErrors((e) => ({ ...e, fileUrl: undefined }));
     if (file.size > 25 * 1024 * 1024) {
-      setErrors((e) => ({ ...e, fileUrl: "Tệp tối đa 25 MB" }));
-      return Upload.LIST_IGNORE;
+      setErrors((e) => ({ ...e, fileUrl: "Tệp bài học tối đa 25 MB" }));
+      return;
     }
     setUploading(true);
     try {
       const r = await upload("/teacher/uploads", file, "lesson-file");
-      setForm((f) => ({ ...f, fileUrl: r.url, fileName: r.name }));
+      setForm((f) => ({
+        ...f,
+        fileUrl: r.url,
+        fileName: r.filename || file.name,
+      }));
       message.success("Đã tải tệp bài học");
     } catch (e) {
       const fields = errorsOf(e);
@@ -150,118 +146,97 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
     } finally {
       setUploading(false);
     }
-    return Upload.LIST_IGNORE;
   };
 
   const remove = () =>
     Modal.confirm({
       title: "Xóa bài học?",
       content: `Bài học "${form.title}" sẽ bị xóa vĩnh viễn.`,
-      okText: "Xóa",
+      okText: "Xóa bài học",
       cancelText: "Hủy",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await del(`/teacher/lessons/${lessonId}`);
           message.success("Đã xóa bài học");
-          onDone(form.moduleId);
+          onDone();
         } catch (e) {
           message.error(e.message);
-          throw e;
         }
       },
     });
 
-  const crumbs = [
-    { label: "Khóa học", onClick: onCancel },
-    { label: course?.title || "Khóa học", onClick: onCancel },
-    {
-      label: modules.find((m) => m.id === form.moduleId)?.title || "Module",
-      onClick: onCancel,
-    },
-    { label: lessonId ? "Bài học" : "Thêm bài học" },
-  ];
-
   return (
     <>
-      <Crumb items={crumbs} />
+      <Crumb
+        items={[
+          { label: "Khóa học", onClick: onCancel },
+          { label: course?.title || "Khóa học", onClick: onCancel },
+          { label: module?.title || "Module", onClick: onCancel },
+          { label: lessonId ? form.title || "Chỉnh sửa" : "Thêm bài học" },
+        ]}
+      />
       <div className="page-title">
-        <span className="kicker">LESSON EDITOR</span>
+        <span className="kicker">
+          {lessonId ? "CHỈNH SỬA BÀI HỌC" : "THÊM BÀI HỌC MỚI"}
+        </span>
         <h1>{lessonId ? "Chỉnh sửa bài học" : "Thêm bài học"}</h1>
+        <p>Thuộc module: {module?.title || "…"}</p>
       </div>
 
-      <div className="panel" style={{ opacity: loading ? 0.5 : 1 }}>
+      <div
+        className="panel"
+        data-testid="lesson-form"
+        style={{ opacity: loading ? 0.5 : 1 }}
+      >
         <div className="form-grid">
-          <Field label="Module" required error={errors.moduleId}>
-            <Select
-              value={form.moduleId}
-              onChange={(v) => set("moduleId", v)}
-              placeholder="Chọn module"
-              options={modules.map((m) => ({ value: m.id, label: m.title }))}
-            />
-          </Field>
           <Field
-            label="Tiêu đề bài học"
+            label="Tên bài học"
             required
             error={errors.title}
-            hint={`${form.title.trim().length}/150 ký tự`}
+            hint={`${form.title.trim().length}/100 ký tự`}
           >
             <Input
-              maxLength={150}
+              maxLength={100}
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
+              placeholder="Ví dụ: Giới thiệu kiến trúc MVC"
             />
           </Field>
-        </div>
-
-        <div className="form-grid">
-          <Field label="Content type" required error={errors.contentType}>
+          <Field label="Loại bài học" required error={errors.contentType}>
             <Select
               value={form.contentType}
               onChange={(v) => set("contentType", v)}
               options={TYPES}
             />
           </Field>
+        </div>
+
+        <LessonBodyFields
+          form={form}
+          set={set}
+          errors={errors}
+          uploading={uploading}
+          onPickFile={pickFile}
+          onOpenAi={() => setAiOpen(true)}
+        />
+
+        <div className="form-grid">
           <Field
-            label="Duration (minutes)"
+            label="Thời lượng (phút)"
+            required
             error={errors.durationMinutes}
-            hint="Không bắt buộc · 1–600"
+            hint="Từ 1 đến 600 phút"
           >
             <InputNumber
               style={{ width: "100%" }}
               min={1}
               max={600}
               value={form.durationMinutes}
-              onChange={(v) => set("durationMinutes", v ?? null)}
-              placeholder="Ví dụ: 25"
+              onChange={(v) => set("durationMinutes", v)}
             />
           </Field>
         </div>
-
-        <Field
-          label="Order"
-          required
-          error={errors.position}
-          hint="Tạo mới sẽ mặc định ở vị trí cuối module."
-        >
-          <InputNumber
-            style={{ width: 180 }}
-            min={1}
-            value={form.position}
-            onChange={(v) => set("position", v ?? 1)}
-          />
-        </Field>
-
-        <LessonBodyFields
-          form={form}
-          errors={errors}
-          saving={saving}
-          uploading={uploading}
-          hasExistingFile={!!lessonId}
-          onChange={set}
-          onPickFile={pickFile}
-          onOpenAi={() => setAiOpen(true)}
-        />
 
         <div className="form-actions">
           <Button
@@ -301,9 +276,14 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
           courseId,
           lessonId: lessonId || undefined,
         }}
-        onAccept={(text) => {
-          set("content", text);
-          message.success("Đã áp dụng nội dung AI");
+        onAccept={(text, aiForm) => {
+          setForm((prev) => ({
+            ...prev,
+            content: text,
+            title: prev.title?.trim() ? prev.title : (aiForm?.topic?.trim() || prev.title),
+          }));
+          setErrors((e) => ({ ...e, content: undefined, title: undefined }));
+          message.success("Đã áp dụng nội dung bài học từ AI");
         }}
         onClose={() => setAiOpen(false)}
       />

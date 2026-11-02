@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Input } from "antd";
-import { Save, X } from "lucide-react";
+import { Save, Sparkles, X } from "lucide-react";
 import { Field } from "./shared";
 
 /** Create/edit form for a module. */
@@ -12,6 +12,7 @@ export function ModuleFormPanel({
   onChange,
   onSave,
   onReset,
+  onOpenAi,
 }) {
   return (
     <div className="panel" ref={formRef} style={{ marginTop: 20 }}>
@@ -55,6 +56,19 @@ export function ModuleFormPanel({
           />
         </Field>
       </div>
+
+      <div className="ai-row" style={{ marginTop: 8, marginBottom: 16 }}>
+        <Button
+          icon={<Sparkles size={16} />}
+          onClick={onOpenAi}
+        >
+          Generate with AI
+        </Button>
+        <span className="hint">
+          Nội dung AI sẽ được điền vào Mô tả module khi bạn bấm Accept.
+        </span>
+      </div>
+
       <div className="form-actions">
         <Button
           type="primary"

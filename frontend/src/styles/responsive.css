@@ -323,6 +323,7 @@
   .teacher-course-actions {
     grid-template-columns: 1fr 1fr;
   }
+  .teacher-course-actions .btn-manage-content,
   .teacher-course-actions .ant-btn-primary {
     grid-column: 1 / -1;
   }

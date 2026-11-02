@@ -99,6 +99,7 @@ export function AiDialogContent({
           <Field label="Content type" required error={errors.contentType}>
             <Select value={form.contentType} disabled options={[
               { value: "COURSE_DESCRIPTION", label: "Course description" },
+              { value: "MODULE_DESCRIPTION", label: "Module description" },
               { value: "LESSON_CONTENT", label: "Lesson content" },
             ]} />
           </Field>

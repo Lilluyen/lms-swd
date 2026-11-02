@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Button, Empty, Input, Modal, Pagination, Select, Skeleton, message } from "antd";
-import { BookOpen, Layers, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
+import { BookOpen, Layers, Pencil, Plus, Search, Sparkles, Star, Trash2 } from "lucide-react";
 import { api, del } from "../api";
 import { LEVEL_LABEL, PAGE_SIZE, STATUS, day, money } from "./shared";
 
-export function TeacherCourses({ onCreate, onManage, onEdit, onView }) {
+export function TeacherCourses({ onCreate, onCopilot, onManage, onEdit, onView }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(0);
@@ -82,15 +82,29 @@ export function TeacherCourses({ onCreate, onManage, onEdit, onView }) {
           <h1>Khóa học của tôi</h1>
           <p>Tạo, sắp xếp và xuất bản nội dung bài giảng của bạn.</p>
         </div>
-        <Button
-          data-testid="create-course"
-          type="primary"
-          size="large"
-          icon={<Plus size={16} />}
-          onClick={onCreate}
-        >
-          Tạo khóa học
-        </Button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Button
+            size="large"
+            icon={<Sparkles size={16} />}
+            onClick={onCopilot}
+            style={{
+              borderColor: "#6366f1",
+              color: "#6366f1",
+              fontWeight: 500,
+            }}
+          >
+            Tạo bằng AI Copilot
+          </Button>
+          <Button
+            data-testid="create-course"
+            type="primary"
+            size="large"
+            icon={<Plus size={16} />}
+            onClick={onCreate}
+          >
+            Tạo khóa học
+          </Button>
+        </div>
       </div>
 
       <div className="t-toolbar">
@@ -188,7 +202,14 @@ export function TeacherCourses({ onCreate, onManage, onEdit, onView }) {
               </div>
 
               <div className="teacher-course-actions">
-                <Button type="primary" onClick={() => onManage(course)}>Quản lý nội dung</Button>
+                <Button
+                  type="primary"
+                  className="btn-manage-content"
+                  icon={<BookOpen size={15} />}
+                  onClick={() => onManage(course)}
+                >
+                  Quản lý nội dung
+                </Button>
                 <Button icon={<Pencil size={15} />} aria-label={`Sửa ${course.title}`} onClick={() => onEdit(course)}>Sửa</Button>
                 <Button danger icon={<Trash2 size={15} />} aria-label={`Xóa ${course.title}`} loading={busyId === course.id} onClick={() => remove(course)}>Xóa</Button>
               </div>
@@ -214,4 +235,3 @@ export function TeacherCourses({ onCreate, onManage, onEdit, onView }) {
     </>
   );
 }
-

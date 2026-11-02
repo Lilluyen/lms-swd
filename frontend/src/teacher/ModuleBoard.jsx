@@ -5,6 +5,7 @@ import { api, del, post, put } from "../api";
 import { Crumb, errorsOf } from "./shared";
 import { ModuleFormPanel } from "./ModuleFormPanel";
 import { ModuleList } from "./ModuleList";
+import { AiDialog } from "./AiDialog";
 
 /** Container for the Teacher module/lesson structure screen. */
 export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
@@ -18,6 +19,7 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
   const [lessons, setLessons] = useState({});
   const [dragId, setDragId] = useState(null);
   const [overId, setOverId] = useState(null);
+  const [aiOpen, setAiOpen] = useState(false);
   const formRef = useRef(null);
 
   const load = async () => {
@@ -270,6 +272,27 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
         onChange={changeDraft}
         onSave={saveModule}
         onReset={reset}
+        onOpenAi={() => setAiOpen(true)}
+      />
+
+      <AiDialog
+        open={aiOpen}
+        defaultContentType="MODULE_DESCRIPTION"
+        defaults={{
+          topic: draft.title || course?.title || "",
+          context: course?.context || "",
+          courseId,
+        }}
+        onAccept={(text, aiForm) => {
+          setDraft((prev) => ({
+            ...prev,
+            description: text,
+            title: prev.title?.trim() ? prev.title : (aiForm?.topic?.trim() || prev.title),
+          }));
+          setErrors((e) => ({ ...e, description: undefined, title: undefined }));
+          message.success("Đã áp dụng nội dung AI vào module");
+        }}
+        onClose={() => setAiOpen(false)}
       />
     </>
   );
