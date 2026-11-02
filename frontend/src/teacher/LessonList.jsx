@@ -1,14 +1,16 @@
 import React from "react";
 import { Button, Tag } from "antd";
-import { FileText, Pencil, Plus, Trash2, Video } from "lucide-react";
+import { FileText, Pencil, Plus, Sparkles, Trash2, Video } from "lucide-react";
 
 /** Lesson panel inside an expanded module on the module board. */
 export function LessonList({
   moduleId,
+  moduleItem,
   lessons,
   onEditLesson,
   onAddLesson,
   onRemoveLesson,
+  onAiBatchLessons,
 }) {
   return (
     <div className="lesson-panel">
@@ -54,15 +56,26 @@ export function LessonList({
           Module chưa có bài học nào.
         </p>
       )}
-      <Button
-        size="small"
-        type="dashed"
-        icon={<Plus size={14} />}
-        onClick={() => onAddLesson(moduleId)}
-        style={{ marginTop: 10 }}
-      >
-        Thêm bài học
-      </Button>
+      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        <Button
+          size="small"
+          type="dashed"
+          icon={<Plus size={14} />}
+          onClick={() => onAddLesson(moduleId)}
+        >
+          Thêm bài học
+        </Button>
+        {onAiBatchLessons && (
+          <Button
+            size="small"
+            icon={<Sparkles size={14} />}
+            onClick={() => onAiBatchLessons(moduleItem || { id: moduleId })}
+            style={{ borderColor: "#6366f1", color: "#6366f1" }}
+          >
+            AI sinh loạt bài học
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

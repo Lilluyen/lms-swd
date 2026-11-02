@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Empty } from "antd";
-import { GripVertical, Layers, Pencil, Trash2 } from "lucide-react";
+import { GripVertical, Layers, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { LessonList } from "./LessonList";
 
 /** Draggable module list with expandable lesson panels. */
@@ -22,6 +22,8 @@ export function ModuleList({
   onEditLesson,
   onAddLesson,
   onRemoveLesson,
+  onAiBatchLessons,
+  onOpenCurriculumAi,
 }) {
   if (loading) {
     return (
@@ -33,7 +35,22 @@ export function ModuleList({
     );
   }
   if (!modules.length) {
-    return <Empty description="Khóa học chưa có module nào. Hãy thêm module đầu tiên." />;
+    return (
+      <Empty
+        description="Khóa học chưa có module nào. Hãy dùng AI tạo khung chương trình hoặc thêm module thủ công."
+      >
+        {onOpenCurriculumAi && (
+          <Button
+            type="primary"
+            icon={<Sparkles size={16} />}
+            onClick={onOpenCurriculumAi}
+            style={{ background: "#6366f1", borderColor: "#6366f1", marginTop: 8 }}
+          >
+            Tạo khung Modules & Lessons bằng AI
+          </Button>
+        )}
+      </Empty>
+    );
   }
 
   return (
@@ -76,6 +93,17 @@ export function ModuleList({
               >
                 Lessons
               </Button>
+              {onAiBatchLessons && (
+                <Button
+                  size="small"
+                  icon={<Sparkles size={14} />}
+                  onClick={() => onAiBatchLessons(m)}
+                  title="AI sinh danh sách bài học cho module này"
+                  style={{ borderColor: "#6366f1", color: "#6366f1", fontWeight: 500 }}
+                >
+                  AI Gen bài
+                </Button>
+              )}
               <Button
                 size="small"
                 type="text"
@@ -95,10 +123,12 @@ export function ModuleList({
           {openLessons === m.id && (
             <LessonList
               moduleId={m.id}
+              moduleItem={m}
               lessons={lessons[m.id] || []}
               onEditLesson={onEditLesson}
               onAddLesson={onAddLesson}
               onRemoveLesson={onRemoveLesson}
+              onAiBatchLessons={onAiBatchLessons}
             />
           )}
         </div>

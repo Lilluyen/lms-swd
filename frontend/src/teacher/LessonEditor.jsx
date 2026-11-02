@@ -277,12 +277,15 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
           lessonId: lessonId || undefined,
         }}
         onAccept={(text, aiForm) => {
+          const words = text ? text.trim().split(/\s+/).length : 0;
+          const estimatedMinutes = Math.max(5, Math.min(60, Math.ceil(words / 150) * 5));
           setForm((prev) => ({
             ...prev,
             content: text,
             title: prev.title?.trim() ? prev.title : (aiForm?.topic?.trim() || prev.title),
+            durationMinutes: (!prev.durationMinutes || prev.durationMinutes === 10) && estimatedMinutes > 0 ? estimatedMinutes : prev.durationMinutes,
           }));
-          setErrors((e) => ({ ...e, content: undefined, title: undefined }));
+          setErrors((e) => ({ ...e, content: undefined, title: undefined, durationMinutes: undefined }));
           message.success("Đã áp dụng nội dung bài học từ AI");
         }}
         onClose={() => setAiOpen(false)}

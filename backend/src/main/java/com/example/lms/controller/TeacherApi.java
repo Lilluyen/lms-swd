@@ -244,6 +244,40 @@ public class TeacherApi {
     return ai.createCourseFromDraft(draft, teacher(s));
   }
 
+  @PostMapping("/ai/generate-curriculum")
+  CurriculumAiResponse generateCurriculum(
+    @RequestBody CurriculumAiRequest request,
+    HttpSession s
+  ) {
+    return ai.generateCurriculum(request, teacher(s));
+  }
+
+  @PostMapping("/courses/{id}/apply-curriculum")
+  Map<String, Object> applyCurriculum(
+    @PathVariable Long id,
+    @RequestBody ApplyCurriculumRequest request,
+    HttpSession s
+  ) {
+    return ai.applyCurriculum(id, request, teacher(s));
+  }
+
+  @PostMapping("/ai/generate-lessons")
+  LessonBatchAiResponse generateLessons(
+    @RequestBody LessonBatchAiRequest request,
+    HttpSession s
+  ) {
+    return ai.generateLessonsForModule(request, teacher(s));
+  }
+
+  @PostMapping("/modules/{id}/apply-lessons")
+  Map<String, Object> applyLessons(
+    @PathVariable Long id,
+    @RequestBody ApplyLessonsRequest request,
+    HttpSession s
+  ) {
+    return ai.applyLessons(id, request, teacher(s));
+  }
+
   /* --------------------------------------------------------------- uploads */
 
   @PostMapping("/uploads")
