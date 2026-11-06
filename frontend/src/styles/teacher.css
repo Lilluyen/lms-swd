@@ -357,6 +357,16 @@
   min-width: 0;
 }
 
+.field .ant-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.field .ant-select-selector {
+  width: 100%;
+  min-width: 0;
+}
+
 .field > label {
   font-size: 9.5px;
   font-weight: 700;

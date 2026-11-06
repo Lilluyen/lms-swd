@@ -1,7 +1,7 @@
-import React from "react";
-import { Button, Input, Tag } from "antd";
-import { Save, Sparkles } from "lucide-react";
-import { Field } from "./shared";
+import React from 'react';
+import { Button, Input, Tag } from 'antd';
+import { Save, Sparkles } from 'lucide-react';
+import { Field } from './shared';
 
 /** Step 3 of the AI question studio: review, edit and save drafts. */
 export function QuestionDraftList({
@@ -24,7 +24,7 @@ export function QuestionDraftList({
             <p>
               {drafts.length
                 ? `${drafts.length} bản nháp · đã chọn ${selected.length}`
-                : "Kết quả sẽ xuất hiện tại đây"}
+                : 'Kết quả sẽ xuất hiện tại đây'}
             </p>
           </div>
         </div>
@@ -39,13 +39,14 @@ export function QuestionDraftList({
           <Sparkles size={28} />
           <h3>Chưa có bản nháp</h3>
           <p>
-            Điền tiêu chí và nội dung bài học, sau đó bấm “Tạo bản nháp câu hỏi”.
+            Điền tiêu chí và nội dung bài học, sau đó bấm “Tạo bản nháp câu
+            hỏi”.
           </p>
         </div>
       ) : (
         drafts.map((draft, index) => (
           <article
-            className={`question-draft-card ${selected.includes(index) ? "selected" : ""}`}
+            className={`question-draft-card ${selected.includes(index) ? 'selected' : ''}`}
             key={draft.draftId || index}
           >
             <div className="draft-card-head">
@@ -61,7 +62,7 @@ export function QuestionDraftList({
                 <Tag color="purple">Multiple Choice</Tag>
                 <Tag
                   color={
-                    { EASY: "green", MEDIUM: "gold", HARD: "red" }[
+                    { EASY: 'green', MEDIUM: 'gold', HARD: 'red' }[
                       draft.difficulty
                     ]
                   }
@@ -74,7 +75,9 @@ export function QuestionDraftList({
               <Input.TextArea
                 autoSize={{ minRows: 2, maxRows: 5 }}
                 value={draft.content}
-                onChange={(e) => onUpdateDraft(index, { content: e.target.value })}
+                onChange={(e) =>
+                  onUpdateDraft(index, { content: e.target.value })
+                }
               />
             </Field>
             <div className="draft-answers">
@@ -96,6 +99,12 @@ export function QuestionDraftList({
                   />
                   <span>{String.fromCharCode(65 + answerIndex)}</span>
                   <Input
+                    style={{
+                      width: '100%',
+                      minWidth: 0,
+                      padding: '10px',
+                      flex: 1,
+                    }}
                     value={answer.content}
                     onChange={(e) =>
                       onUpdateDraft(index, {
