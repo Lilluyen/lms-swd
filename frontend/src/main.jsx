@@ -18,11 +18,7 @@ import { Header, Sidebar } from "./components/AppShell";
 import { AuthPage, CatalogPage, HomePage } from "./pages/PublicPages";
 import { DashboardPage } from "./pages/DashboardPage";
 import { TeacherWorkspace } from "./pages/TeacherWorkspace";
-import {
-  CoursePage,
-  LessonPage,
-  PaymentResultPage,
-} from "./pages/CoursePage";
+import { CoursePage, LessonPage, PaymentResultPage } from "./pages/CoursePage";
 import {
   LearningPage,
   ProfilePage,
@@ -187,11 +183,36 @@ function App() {
     });
   const saveQuiz = () =>
     action(async () => {
-      form.id
-        ? await put("/quizzes/" + form.id, form)
-        : await post("/quizzes", form);
+      form.aiQuestions?.length
+        ? await post("/quizzes/ai", {
+            title: form.title,
+            subject: form.subject,
+            durationMinutes: form.durationMinutes,
+            questions: form.aiQuestions,
+          })
+        : form.id
+          ? await put("/quizzes/" + form.id, form)
+          : await post("/quizzes", form);
+      Q(await api("/questions"));
       Z(await api("/quizzes"));
       go("quizzes");
+    });
+  const generateTeacherQuiz = () =>
+    action(async () => {
+      const drafts = await post("/quizzes/ai/draft", {
+        title: form.title,
+        subject: form.subject,
+        difficulty: form.aiDifficulty || "MEDIUM",
+        quantity: form.aiQuantity ?? 5,
+      });
+      F((previous) =>
+        previous.title === form.title &&
+        previous.subject === form.subject &&
+        !previous.id
+          ? { ...previous, aiQuestions: drafts, questionIds: [] }
+          : previous,
+      );
+      N("Đã tạo bản nháp. Hãy kiểm tra câu hỏi và đáp án trước khi lưu Quiz.");
     });
   const deleteQuiz = (q) =>
     confirmDelete("Xóa quiz?", async () => {
@@ -242,7 +263,10 @@ function App() {
       } catch (err) {
         if (String(code).trim().toUpperCase() === "TEST2K") {
           const orig = Number(
-            payment.originalAmount ?? payment.course?.price ?? payment.amount ?? 0,
+            payment.originalAmount ??
+              payment.course?.price ??
+              payment.amount ??
+              0,
           );
           const finalAmt = 2000;
           const disc = Math.max(0, orig - finalAmt);
@@ -424,11 +448,7 @@ function App() {
       );
   }, []);
   useEffect(() => {
-    if (
-      page !== "course" ||
-      !payment?.orderId ||
-      payment.status !== "PENDING"
-    )
+    if (page !== "course" || !payment?.orderId || payment.status !== "PENDING")
       return;
     let stopped = false;
     let running = false;
@@ -698,6 +718,8 @@ function App() {
               setForm={F}
               questions={questions}
               saveQuiz={saveQuiz}
+              busy={busy}
+              generateTeacherQuiz={generateTeacherQuiz}
             />
           )}
           {page === "practice-ai" && (

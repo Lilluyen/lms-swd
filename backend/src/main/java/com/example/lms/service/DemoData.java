@@ -45,10 +45,23 @@ public class DemoData implements CommandLineRunner {
   @Autowired
   SupportService support;
 
+  @Autowired
+  QuestionService questionService;
+
+  @Autowired
+  com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+  @org.springframework.beans.factory.annotation.Value("${TFT_DEMO_TEACHER_EMAIL:teacher@learnova.local}")
+  String tftDemoTeacherEmail;
+
   @Override
   @Transactional
   public void run(String... args) {
-    if (users.findByEmail("teacher@learnova.local").isPresent()) return;
+    var existingTeacher = users.findByEmail("teacher@learnova.local");
+    if (existingTeacher.isPresent()) {
+      seedTftQuestions();
+      return;
+    }
     User t = new User();
     t.name = "Giáo viên Learnova";
     t.email = "teacher@learnova.local";
@@ -159,6 +172,34 @@ public class DemoData implements CommandLineRunner {
       link.quiz = quiz;
       link.question = q;
       links.save(link);
+    }
+    seedTftQuestions();
+  }
+
+  private void seedTftQuestions() {
+    User teacher = users.findByEmail(tftDemoTeacherEmail.trim().toLowerCase(java.util.Locale.ROOT))
+      .orElse(null);
+    if (teacher == null || !"TEACHER".equals(teacher.role)) {
+      org.slf4j.LoggerFactory.getLogger(DemoData.class).warn(
+        "TFT demo questions skipped: configured account does not exist or is not a teacher"
+      );
+      return;
+    }
+    try (var stream = new org.springframework.core.io.ClassPathResource(
+      "demo/tft-beginner-questions.json"
+    ).getInputStream()) {
+      var inputs = objectMapper.readValue(
+        stream, com.example.lms.dto.QuestionInput[].class
+      );
+      var existing = questions.findByTeacherId(teacher.id);
+      for (var input : inputs) {
+        boolean present = existing.stream().anyMatch(q ->
+          input.subject().equals(q.subject) && input.content().equals(q.content)
+        );
+        if (!present) questionService.create(teacher, input);
+      }
+    } catch (java.io.IOException e) {
+      throw new IllegalStateException("Cannot load TFT demo questions", e);
     }
   }
 }
