@@ -117,43 +117,56 @@ export function QuestionCriteriaPanel({
           trước khi gửi AI.
         </p>
         <div className="lesson-picker">
-          <Select
-            allowClear
-            showSearch
-            placeholder="Chọn khóa học"
-            value={courseId}
-            onChange={onChooseCourse}
-            options={courses.map((item) => ({ value: item.id, label: item.title }))}
-          />
-          <Select
-            allowClear
-            placeholder="Chọn module"
-            value={moduleId}
-            disabled={!courseId}
-            onChange={onChooseModule}
-            options={modules.map((item) => ({
-              value: item.id,
-              label: `${item.position}. ${item.title}`,
-            }))}
-          />
-          <Select
-            allowClear
-            placeholder="Chọn bài học"
-            value={form.lessonId}
-            disabled={!moduleId}
-            onChange={(v) => set("lessonId", v)}
-            options={lessons.map((item) => ({
-              value: item.id,
-              label: `${item.position}. ${item.title} · ${item.contentType}`,
-            }))}
-          />
-          <Button
-            icon={<FileText size={16} />}
-            disabled={!form.lessonId}
-            onClick={onUseLesson}
-          >
-            Dùng nội dung bài
-          </Button>
+          <div className="lesson-picker-row">
+            <Select
+              allowClear
+              showSearch
+              popupMatchSelectWidth={false}
+              optionFilterProp="label"
+              placeholder="Chọn khóa học"
+              value={courseId}
+              onChange={onChooseCourse}
+              options={courses.map((item) => ({ value: item.id, label: item.title }))}
+            />
+            <Select
+              allowClear
+              showSearch
+              popupMatchSelectWidth={false}
+              optionFilterProp="label"
+              placeholder="Chọn module"
+              value={moduleId}
+              disabled={!courseId}
+              onChange={onChooseModule}
+              options={modules.map((item) => ({
+                value: item.id,
+                label: `${item.position}. ${item.title}`,
+              }))}
+            />
+          </div>
+          <div className="lesson-picker-row lesson-picker-row-action">
+            <Select
+              allowClear
+              showSearch
+              popupMatchSelectWidth={false}
+              optionFilterProp="label"
+              placeholder="Chọn bài học"
+              value={form.lessonId}
+              disabled={!moduleId}
+              onChange={(v) => set("lessonId", v)}
+              options={lessons.map((item) => ({
+                value: item.id,
+                label: `${item.position}. ${item.title} · ${item.contentType}`,
+              }))}
+            />
+            <Button
+              className="lesson-picker-btn"
+              icon={<FileText size={16} />}
+              disabled={!form.lessonId}
+              onClick={onUseLesson}
+            >
+              Dùng nội dung bài
+            </Button>
+          </div>
         </div>
         {errors.lessonId && (
           <span className="field-err lesson-error">{errors.lessonId}</span>
