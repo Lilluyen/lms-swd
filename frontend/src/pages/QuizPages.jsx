@@ -322,7 +322,8 @@ export function PracticeAiPage({ form, setForm, busy, generatePractice }) {
 export function TakeQuizPage({
   quizData,
   choices,
-  setChoices,
+  checkAnswer,
+  feedback,
   remaining,
   busy,
   submitQuiz,
@@ -341,6 +342,10 @@ export function TakeQuizPage({
         title={quizData.quiz.title}
         desc={`${quizData.questions.length} câu hỏi · ${quizData.quiz.durationMinutes} phút`}
       />
+      <p className="muted">
+        Chọn đáp án để xem đúng/sai và giải thích ngay. Mỗi câu được chốt sau
+        khi chọn và không thể đổi lại.
+      </p>
       {quizData.questions.map((q, i) => (
         <div className="take-card" key={q.id}>
           <span className="kicker">
@@ -356,11 +361,27 @@ export function TakeQuizPage({
                 type="radio"
                 name={"q" + q.id}
                 checked={choices[q.id] === a.id}
-                onChange={() => setChoices({ ...choices, [q.id]: a.id })}
+                disabled={busy || remaining === 0 || Boolean(feedback[q.id])}
+                onChange={() => checkAnswer(q.id, a.id)}
               />
               {a.content}
             </label>
           ))}
+          {feedback[q.id] && (
+            <div
+              className={`quiz-feedback ${feedback[q.id].correct ? "is-correct" : "is-incorrect"}`}
+              role="status"
+            >
+              <strong>
+                {feedback[q.id].correct ? "✓ Chính xác!" : "✗ Chưa chính xác"}
+              </strong>
+              <p>Đáp án đúng: {feedback[q.id].correctText}</p>
+              <p>
+                {feedback[q.id].explanation ||
+                  "Giáo viên chưa thêm giải thích cho câu này."}
+              </p>
+            </div>
+          )}
         </div>
       ))}
       <button

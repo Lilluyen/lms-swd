@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { post } from "../api";
 import { Button, Input, Progress, Tag } from "antd";
 import {
   Archive,
@@ -160,9 +161,7 @@ export function LearningPage({
                     e.currentTarget.src = "/images/course-cover-default.png";
                   }}
                 />
-                <span className="cover-badge">
-                  {c.category || "KHÓA HỌC"}
-                </span>
+                <span className="cover-badge">{c.category || "KHÓA HỌC"}</span>
                 <span className="enrolled-payment-badge">
                   <CheckCircle2 size={11} /> {paymentBadgeText}
                 </span>
@@ -350,12 +349,32 @@ export function ResultsPage({ results, openResult }) {
 }
 
 export function ReviewPage({ review, go }) {
+  const [analysis, setAnalysis] = useState(review.result.aiFeedback || "");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (review.result.aiFeedback) return;
+    let active = true;
+    setAnalyzing(true);
+    setAnalysisError("");
+    post(`/results/${review.result.id}/analysis`, {})
+      .then((data) => {
+        if (active) setAnalysis(data.feedback);
+      })
+      .catch((error) => {
+        if (active) setAnalysisError(error.message);
+      })
+      .finally(() => {
+        if (active) setAnalyzing(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [review.result.id, review.result.aiFeedback, retry]);
   return (
     <>
-      <PageTitle
-        kicker="KẾT QUẢ LUYỆN TẬP"
-        title={review.result.quiz.title}
-      />
+      <PageTitle kicker="KẾT QUẢ LUYỆN TẬP" title={review.result.quiz.title} />
       <div className="review-summary">
         <Progress
           type="circle"
@@ -371,6 +390,37 @@ export function ReviewPage({ review, go }) {
           <Button onClick={() => go("quizzes")}>Luyện tập tiếp</Button>
         </div>
       </div>
+      <section className="take-card" aria-label="Đánh giá kết quả bằng AI">
+        <h2>AI phân tích kết quả</h2>
+        <p className="muted">
+          Nhận xét dựa trên bài luyện tập có phản hồi tức thì, giúp bạn xác định
+          nội dung cần ôn.
+        </p>
+        {analyzing && (
+          <p role="status">
+            AI đang phân tích câu trả lời và xây dựng gợi ý ôn tập…
+          </p>
+        )}
+        {analysis && (
+          <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+            {analysis}
+          </div>
+        )}
+        {analysisError && (
+          <div role="alert">
+            <p>
+              Điểm và bài làm đã được lưu. Chưa thể phân tích AI:{" "}
+              {analysisError}
+            </p>
+            <Button
+              disabled={analyzing}
+              onClick={() => setRetry((value) => value + 1)}
+            >
+              Thử phân tích lại
+            </Button>
+          </div>
+        )}
+      </section>
       {review.answers.map((a, i) => (
         <div className="take-card" key={a.id}>
           <Tag color={a.correct ? "green" : "red"}>

@@ -18,6 +18,8 @@ public class QuizResult {
 
   public int score;
   public int total;
+  @Column(length = 12000)
+  public String aiFeedback;
   public java.time.Instant startedAt = java.time.Instant.now();
   public java.time.Instant completedAt;
 }
