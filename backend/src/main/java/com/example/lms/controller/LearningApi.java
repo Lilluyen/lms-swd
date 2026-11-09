@@ -23,6 +23,9 @@ public class LearningApi extends BaseController {
   @Autowired
   private SupportService support;
 
+  @Autowired
+  private EnrollmentService enrollmentService;
+
   public LearningApi(
     CourseRepo courses,
     QuestionRepo questions,
@@ -47,7 +50,12 @@ public class LearningApi extends BaseController {
 
   @GetMapping("/enrollments")
   List<Enrollment> myEnrollments(HttpSession s) {
-    return enrollments.findByStudentId(student(s).id);
+    return enrollmentService.listByStudent(student(s));
+  }
+
+  @PostMapping("/enrollments/{courseId}/archive")
+  Enrollment toggleArchive(@PathVariable Long courseId, HttpSession s) {
+    return enrollmentService.toggleArchive(student(s), courseId);
   }
 
   @GetMapping("/progress")

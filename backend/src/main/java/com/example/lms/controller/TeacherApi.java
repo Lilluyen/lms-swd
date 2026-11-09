@@ -15,7 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Teacher-facing content API: Course -> Module -> Lesson plus the shared
- * AI content dialog and uploads. Ownership is verified on every call.
+ * AI content dialog, AI Course Copilot and uploads. Ownership is verified on every call.
  */
 @org.springframework.transaction.annotation.Transactional
 @RestController
@@ -226,6 +226,56 @@ public class TeacherApi {
   @PostMapping("/ai/generate")
   Map<String, Object> generate(@RequestBody AiRequest request, HttpSession s) {
     return ai.generate(request, teacher(s));
+  }
+
+  @PostMapping("/ai/chat-course")
+  CourseChatResponse chatCourse(
+    @RequestBody CourseChatRequest request,
+    HttpSession s
+  ) {
+    return ai.chatCourse(request, teacher(s));
+  }
+
+  @PostMapping("/ai/create-course-from-draft")
+  Map<String, Object> createCourseFromDraft(
+    @RequestBody CourseDraft draft,
+    HttpSession s
+  ) {
+    return ai.createCourseFromDraft(draft, teacher(s));
+  }
+
+  @PostMapping("/ai/generate-curriculum")
+  CurriculumAiResponse generateCurriculum(
+    @RequestBody CurriculumAiRequest request,
+    HttpSession s
+  ) {
+    return ai.generateCurriculum(request, teacher(s));
+  }
+
+  @PostMapping("/courses/{id}/apply-curriculum")
+  Map<String, Object> applyCurriculum(
+    @PathVariable Long id,
+    @RequestBody ApplyCurriculumRequest request,
+    HttpSession s
+  ) {
+    return ai.applyCurriculum(id, request, teacher(s));
+  }
+
+  @PostMapping("/ai/generate-lessons")
+  LessonBatchAiResponse generateLessons(
+    @RequestBody LessonBatchAiRequest request,
+    HttpSession s
+  ) {
+    return ai.generateLessonsForModule(request, teacher(s));
+  }
+
+  @PostMapping("/modules/{id}/apply-lessons")
+  Map<String, Object> applyLessons(
+    @PathVariable Long id,
+    @RequestBody ApplyLessonsRequest request,
+    HttpSession s
+  ) {
+    return ai.applyLessons(id, request, teacher(s));
   }
 
   /* --------------------------------------------------------------- uploads */

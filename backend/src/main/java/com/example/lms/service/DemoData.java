@@ -45,10 +45,23 @@ public class DemoData implements CommandLineRunner {
   @Autowired
   SupportService support;
 
+  @Autowired
+  QuestionService questionService;
+
+  @Autowired
+  com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+  @org.springframework.beans.factory.annotation.Value("${TFT_DEMO_TEACHER_EMAIL:teacher@learnova.local}")
+  String tftDemoTeacherEmail;
+
   @Override
   @Transactional
   public void run(String... args) {
-    if (users.findByEmail("teacher@learnova.local").isPresent()) return;
+    var existingTeacher = users.findByEmail("teacher@learnova.local");
+    if (existingTeacher.isPresent()) {
+      seedTftQuestions();
+      return;
+    }
     User t = new User();
     t.name = "Giáo viên Learnova";
     t.email = "teacher@learnova.local";
@@ -84,22 +97,38 @@ public class DemoData implements CommandLineRunner {
       c.category = subjects[i];
       c.categoryDefinition = support.category(c.category);
       c.teacher = t;
-      c.price = i == 2 ? new BigDecimal("199000") : BigDecimal.ZERO;
+      c.price = i == 2 ? new BigDecimal("599000") : (i == 1 ? new BigDecimal("299000") : BigDecimal.ZERO);
       c.published = true;
       courses.save(c);
       Module m = new Module();
       m.course = c;
-      m.title = "Bắt đầu hành trình";
+      m.title = "Chương 1: Bắt đầu hành trình";
+      m.description = "Nắm vững các khái niệm cốt lõi và kiến trúc nền tảng.";
       m.position = 1;
       modules.save(m);
       Lesson l = new Lesson();
       l.module = m;
-      l.title = "Giới thiệu và mục tiêu học tập";
+      l.title = "Bài 1: Giới thiệu và mục tiêu học tập";
       l.position = 1;
+      l.durationMinutes = 15;
+      l.contentType = "TEXT";
       l.content =
         descriptions[i] +
         "\n\nMục tiêu\n• Nắm được các khái niệm nền tảng.\n• Thực hành qua ví dụ đơn giản.\n• Tự kiểm tra kiến thức bằng bài quiz.\n\nĐây là bài học mẫu để bạn thử luồng ghi danh và theo dõi tiến độ.";
       lessons.save(l);
+
+      Lesson l2 = new Lesson();
+      l2.module = m;
+      l2.title = "Bài 2: Thực hành chuyên sâu & Case Study thực tế";
+      l2.position = 2;
+      l2.durationMinutes = 25;
+      l2.contentType = "TEXT";
+      l2.content =
+        "Nội dung thực hành chuyên sâu cho môn " +
+        subjects[i] +
+        ".\n\n1. Phân tích bài toán thực tế.\n2. Áp dụng kiến trúc chuẩn mực.\n3. Kiểm thử và tối ưu hóa hiệu năng.";
+      lessons.save(l2);
+
       Question q = new Question();
       q.teacher = t;
       q.subject = subjects[i];
@@ -143,6 +172,34 @@ public class DemoData implements CommandLineRunner {
       link.quiz = quiz;
       link.question = q;
       links.save(link);
+    }
+    seedTftQuestions();
+  }
+
+  private void seedTftQuestions() {
+    User teacher = users.findByEmail(tftDemoTeacherEmail.trim().toLowerCase(java.util.Locale.ROOT))
+      .orElse(null);
+    if (teacher == null || !"TEACHER".equals(teacher.role)) {
+      org.slf4j.LoggerFactory.getLogger(DemoData.class).warn(
+        "TFT demo questions skipped: configured account does not exist or is not a teacher"
+      );
+      return;
+    }
+    try (var stream = new org.springframework.core.io.ClassPathResource(
+      "demo/tft-beginner-questions.json"
+    ).getInputStream()) {
+      var inputs = objectMapper.readValue(
+        stream, com.example.lms.dto.QuestionInput[].class
+      );
+      var existing = questions.findByTeacherId(teacher.id);
+      for (var input : inputs) {
+        boolean present = existing.stream().anyMatch(q ->
+          input.subject().equals(q.subject) && input.content().equals(q.content)
+        );
+        if (!present) questionService.create(teacher, input);
+      }
+    } catch (java.io.IOException e) {
+      throw new IllegalStateException("Cannot load TFT demo questions", e);
     }
   }
 }

@@ -83,14 +83,18 @@ export function AiDialog({
 
   const length = result?.text?.length ?? 0;
   const contentType = form.contentType;
-  const min = result?.minLength ?? (contentType === "COURSE_DESCRIPTION" ? 10 : 10);
-  const max = result?.maxLength ?? (contentType === "COURSE_DESCRIPTION" ? 2000 : 10000);
+  const min = result?.minLength ?? 10;
+  const max = result?.maxLength ?? (contentType === "COURSE_DESCRIPTION" ? 2000 : contentType === "MODULE_DESCRIPTION" ? 500 : 10000);
   const within = !!result && length >= min && length <= max;
 
   const accept = () => {
     if (!result || !within) return;
-    const destination = form.contentType === "COURSE_DESCRIPTION" ? "Mô tả khóa học" : "Nội dung bài học";
-    onAccept(result.text);
+    const destination = form.contentType === "COURSE_DESCRIPTION"
+      ? "Mô tả khóa học"
+      : form.contentType === "MODULE_DESCRIPTION"
+        ? "Mô tả module"
+        : "Nội dung bài học";
+    onAccept(result.text, form);
     setResult(null);
     setEditing(false);
     setStatus({ state: "READY", message: `Đã áp dụng vào ${destination}` });

@@ -1,0 +1,482 @@
+[
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "TFT là tên viết tắt của trò chơi nào?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Teamfight Tactics",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Team Fortress Tournament",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Total Fantasy Tactics",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "The Final Tournament",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "TFT là viết tắt của Teamfight Tactics, có tên tiếng Việt là Đấu Trường Chân Lý."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Trong giao tranh TFT, ai điều khiển các tướng chiến đấu?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Người xem chọn kỹ năng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Các tướng tự động chiến đấu",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Người chơi điều khiển từng đòn đánh",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Đối thủ điều khiển cả hai đội",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Người chơi chuẩn bị đội hình và vị trí; tướng tự động chiến đấu khi giao tranh bắt đầu."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Mục tiêu chính trong một trận TFT tiêu chuẩn là gì?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Hạ rồng nhanh nhất",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Mua tất cả tướng trong cửa hàng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Trở thành người chơi sống sót cuối cùng",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Phá nhà chính của đối thủ",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Người chơi xây dựng đội hình để thắng giao tranh và sống sót lâu hơn các đối thủ."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Bạn dùng tài nguyên nào để mua tướng trong cửa hàng?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Máu người chơi",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Điểm xếp hạng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Năng lượng của tướng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Vàng",
+                            "correct":  true
+                        }
+                    ],
+        "explanation":  "Vàng là tài nguyên dùng để mua tướng và thực hiện các hành động kinh tế."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Hàng chờ có vai trò gì?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Giữ các tướng chưa được đưa lên sân",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Tự động tăng sao mọi tướng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Tăng sát thương cho toàn đội",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Thay thế cửa hàng",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Hàng chờ giữ các tướng dự bị để người chơi sắp xếp và nâng cấp đội hình."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Theo cơ chế ghép sao thông thường, cần bao nhiêu bản sao cùng tướng 1 sao để ghép thành 2 sao?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "5 bản sao",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "3 bản sao",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "2 bản sao",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "4 bản sao",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Ba bản sao cùng tướng 1 sao được ghép thành một tướng 2 sao theo cơ chế thông thường."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Tộc/hệ của tướng chủ yếu giúp người chơi làm gì?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Mở khóa bản đồ mới",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Tăng điểm xếp hạng ngay lập tức",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Kích hoạt hiệu ứng khi đạt điều kiện đội hình",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Đổi tên tài khoản",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Các mốc tộc/hệ cung cấp hiệu ứng khi đội hình đáp ứng điều kiện được mô tả trong trò chơi."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Vị trí khởi đầu thường phù hợp với tướng chống chịu cận chiến là đâu?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Góc xa nhất phía sau mọi chủ lực",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Luôn để trên hàng chờ",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Bất kỳ đâu vì vị trí không ảnh hưởng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Hàng trước để đón sát thương",
+                            "correct":  true
+                        }
+                    ],
+        "explanation":  "Tướng chống chịu thường đứng phía trước để bảo vệ các tướng gây sát thương phía sau."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Vị trí thường phù hợp với chủ lực đánh xa ít chống chịu là đâu?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Phía sau dàn chống chịu",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Một mình ở hàng đầu",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Trên hàng chờ suốt trận",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Ngay trước toàn bộ đội hình",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Chủ lực đánh xa thường cần được che chắn để có thời gian gây sát thương."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Trang bị có tác dụng chính nào?",
+        "difficulty":  "EASY",
+        "answers":  [
+                        {
+                            "content":  "Thay đổi tên tộc/hệ tùy ý",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Bổ sung chỉ số hoặc hiệu ứng cho tướng",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Đổi đối thủ ở vòng tiếp theo",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Đảm bảo thắng mọi giao tranh",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Trang bị giúp tăng sức mạnh theo chỉ số và hiệu ứng ghi trong mô tả."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Trước khi ghép hai trang bị thành phần, nên làm gì?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Chỉ nhìn màu của trang bị",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Luôn chờ đến khi bị loại",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Xem trước công thức và hiệu ứng trang bị hoàn chỉnh",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Ghép ngẫu nhiên vì mọi trang bị giống nhau",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Xem trước công thức giúp chọn trang bị phù hợp với vai trò của tướng."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Khi chọn trang bị cho chủ lực, yếu tố nào nên được ưu tiên?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Chỉ tên của tướng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Giá bán linh thú",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Thứ tự mua tướng trong trận",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Cách tướng gây sát thương và nội dung kỹ năng",
+                            "correct":  true
+                        }
+                    ],
+        "explanation":  "Đọc kỹ năng và chỉ số giúp nhận biết tướng cần sức mạnh công kích, sức mạnh phép thuật hay chỉ số khác."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Lợi ích chính của việc quan sát đội hình đối thủ là gì?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Điều chỉnh vị trí và đánh giá mức độ tranh tướng",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Biết chắc kết quả mọi vòng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Lấy miễn phí trang bị của họ",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Thay đổi lõi nâng cấp của họ",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Quan sát giúp hiểu mối đe dọa và nhận ra có nhiều người cùng tìm các tướng mình cần."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Khi ít máu và đội hình đang thua liên tục, cách xử lý hợp lý là gì?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Bỏ qua việc đổi đội hình",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Cân nhắc dùng vàng để nâng sức mạnh ngay",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Luôn giữ toàn bộ vàng dù sắp bị loại",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Bán hết tướng đang dùng",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Giữ vàng cần cân bằng với khả năng sống sót; đôi khi phải chi để ổn định đội hình."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Vì sao không nên đổi cửa hàng liên tục mà không có mục tiêu?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Vì đổi cửa hàng xóa trang bị",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Vì đổi cửa hàng làm giảm cấp người chơi",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Dễ hết vàng mà chưa cải thiện đội hình rõ rệt",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Vì đổi cửa hàng luôn làm mất máu",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Mỗi lần đổi cửa hàng tốn tài nguyên, nên xác định tướng cần tìm và ngân sách trước khi thực hiện."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Mua kinh nghiệm thường giúp ích gì?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Tăng sao trực tiếp cho mọi tướng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Nhận ngay chiến thắng",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Khôi phục toàn bộ máu",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Tăng tiến độ lên cấp người chơi",
+                            "correct":  true
+                        }
+                    ],
+        "explanation":  "Kinh nghiệm giúp lên cấp người chơi, qua đó mở rộng khả năng triển khai đội hình theo luật của chế độ."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Khi chọn lõi nâng cấp, nên cân nhắc điều gì?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Mức độ phù hợp với đội hình, trang bị và tình trạng trận đấu",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Chỉ chọn biểu tượng đẹp nhất",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Luôn chọn giống đối thủ bất kể tình huống",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Chỉ chọn theo vị trí nút bấm",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Lõi nâng cấp nên phục vụ kế hoạch chơi và nhu cầu hiện tại của đội hình."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Một tướng rẻ tiền đã nâng sao có thể hữu ích thế nào?",
+        "difficulty":  "MEDIUM",
+        "answers":  [
+                        {
+                            "content":  "Chỉ dùng để bán, không được đưa lên sân",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Giữ sức mạnh đầu trận và cầm trang bị tạm",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Luôn mạnh hơn mọi tướng đắt tiền trong mọi hoàn cảnh",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Không thể tham gia đội hình cuối trận",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Tướng đã nâng sao thường giúp ổn định đội hình và có thể làm tướng giữ trang bị tạm thời."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Bạn nhận nhiều trang bị không phù hợp với đội hình định chơi. Nên ưu tiên cách nào?",
+        "difficulty":  "HARD",
+        "answers":  [
+                        {
+                            "content":  "Giữ nguyên kế hoạch trong mọi tình huống",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Chỉ mua tướng theo giá tiền",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Cân nhắc chuyển sang chủ lực tận dụng tốt trang bị đang có",
+                            "correct":  true
+                        },
+                        {
+                            "content":  "Bỏ toàn bộ trang bị trên hàng chờ đến hết trận",
+                            "correct":  false
+                        }
+                    ],
+        "explanation":  "Linh hoạt theo tài nguyên thực tế giúp tận dụng sức mạnh hiện có thay vì phụ thuộc một kế hoạch cố định."
+    },
+    {
+        "subject":  "TFT cho người mới bắt đầu",
+        "content":  "Sau một giao tranh thua, cách phân tích nào giúp cải thiện hiệu quả nhất?",
+        "difficulty":  "HARD",
+        "answers":  [
+                        {
+                            "content":  "Kết luận mọi trận thua chỉ do may rủi",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Đổi toàn bộ đội hình ngay mà không quan sát",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Chỉ xem ngoại hình đối thủ",
+                            "correct":  false
+                        },
+                        {
+                            "content":  "Xem nguyên nhân như thiếu chống chịu, thiếu sát thương hoặc chủ lực bị tiếp cận",
+                            "correct":  true
+                        }
+                    ],
+        "explanation":  "Xác định đúng điểm yếu giúp lựa chọn giữa điều chỉnh vị trí, trang bị, nâng sao hoặc lên cấp."
+    }
+]

@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Button, Modal, message } from "antd";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { api, del, post, put } from "../api";
 import { Crumb, errorsOf } from "./shared";
 import { ModuleFormPanel } from "./ModuleFormPanel";
 import { ModuleList } from "./ModuleList";
+import { AiDialog } from "./AiDialog";
+import { CurriculumAiModal } from "./CurriculumAiModal";
+import { LessonBatchAiModal } from "./LessonBatchAiModal";
 
 /** Container for the Teacher module/lesson structure screen. */
 export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
@@ -18,7 +21,10 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
   const [lessons, setLessons] = useState({});
   const [dragId, setDragId] = useState(null);
   const [overId, setOverId] = useState(null);
-  const formRef = useRef(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [curriculumAiOpen, setCurriculumAiOpen] = useState(false);
+  const [batchLessonModule, setBatchLessonModule] = useState(null);
+  const [moduleModalOpen, setModuleModalOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -86,6 +92,7 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
         message.success("Đã thêm module");
       }
       reset();
+      setModuleModalOpen(false);
     } catch (err) {
       const fields = errorsOf(err);
       if (fields) setErrors(fields);
@@ -102,7 +109,7 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
       description: m.description || "",
     });
     setErrors({});
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setModuleModalOpen(true);
   };
 
   const removeModule = (m) =>
@@ -210,17 +217,31 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
             thả để đổi thứ tự, thứ tự được lưu ngay.
           </p>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<Plus size={16} />}
-          onClick={() => {
-            reset();
-            formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-          }}
-        >
-          Thêm module
-        </Button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Button
+            size="large"
+            icon={<Sparkles size={16} />}
+            onClick={() => setCurriculumAiOpen(true)}
+            style={{
+              borderColor: "#6366f1",
+              color: "#6366f1",
+              fontWeight: 600,
+            }}
+          >
+            AI Sinh khung Modules & Lessons
+          </Button>
+          <Button
+            type="primary"
+            size="large"
+            icon={<Plus size={16} />}
+            onClick={() => {
+              reset();
+              setModuleModalOpen(true);
+            }}
+          >
+            Thêm module
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -235,6 +256,69 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
           }
           style={{ marginBottom: 16 }}
         />
+      )}
+
+      {modules.length === 0 && !loading && course?.description && (
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "16px 20px",
+            background: "var(--card)",
+            border: "2px solid #6366f1",
+            boxShadow: "var(--hard-sm)",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: "#e0e7ff",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Sparkles size={24} color="#6366f1" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 16, fontFamily: "var(--display)" }}>
+              Khóa học đã có đặc tả nội dung sẵn sàng!
+            </h3>
+            <p
+              style={{
+                margin: "0 0 10px",
+                fontSize: 13,
+                color: "var(--ink-2)",
+                lineHeight: 1.6,
+                maxHeight: "72px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              "{course.description}"
+            </p>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <Button
+                type="primary"
+                icon={<Sparkles size={16} />}
+                onClick={() => setCurriculumAiOpen(true)}
+                style={{ background: "#6366f1", borderColor: "#6366f1", fontWeight: 700 }}
+              >
+                Tự động tạo khung Modules & Lessons từ đặc tả này
+              </Button>
+              <span className="muted" style={{ fontSize: 12 }}>
+                AI sẽ phân rã toàn bộ đặc tả thành các module và chuỗi bài học tương ứng.
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="panel">
@@ -259,17 +343,65 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
           onEditLesson={onEditLesson}
           onAddLesson={onAddLesson}
           onRemoveLesson={removeLesson}
+          onAiBatchLessons={(m) => setBatchLessonModule(m)}
+          onOpenCurriculumAi={() => setCurriculumAiOpen(true)}
         />
       </div>
 
       <ModuleFormPanel
-        formRef={formRef}
+        open={moduleModalOpen}
         draft={draft}
         errors={errors}
         saving={saving}
         onChange={changeDraft}
         onSave={saveModule}
-        onReset={reset}
+        onClose={() => {
+          setModuleModalOpen(false);
+          reset();
+        }}
+        onOpenAi={() => setAiOpen(true)}
+      />
+
+      <AiDialog
+        open={aiOpen}
+        defaultContentType="MODULE_DESCRIPTION"
+        defaults={{
+          topic: draft.title || course?.title || "",
+          context: course?.context || course?.description || "",
+          courseId,
+        }}
+        onAccept={(text, aiForm) => {
+          setDraft((prev) => ({
+            ...prev,
+            description: text,
+            title: prev.title?.trim() ? prev.title : (aiForm?.topic?.trim() || prev.title),
+          }));
+          setErrors((e) => ({ ...e, description: undefined, title: undefined }));
+          message.success("Đã áp dụng nội dung AI vào module");
+        }}
+        onClose={() => setAiOpen(false)}
+      />
+
+      <CurriculumAiModal
+        open={curriculumAiOpen}
+        course={course}
+        courseId={courseId}
+        onApplied={(res) => {
+          setData((d) => ({ ...d, modules: res.modules }));
+        }}
+        onClose={() => setCurriculumAiOpen(false)}
+      />
+
+      <LessonBatchAiModal
+        open={Boolean(batchLessonModule)}
+        module={batchLessonModule}
+        course={course}
+        onApplied={(res, mId) => {
+          setLessons((prev) => ({ ...prev, [mId]: res.lessons }));
+          setData((d) => ({ ...d, modules: res.modules }));
+          setOpenLessons(mId);
+        }}
+        onClose={() => setBatchLessonModule(null)}
       />
     </>
   );

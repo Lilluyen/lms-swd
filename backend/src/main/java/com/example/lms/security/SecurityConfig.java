@@ -86,7 +86,10 @@ public class SecurityConfig {
         c
           .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
           .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-          .ignoringRequestMatchers("/api/payments/sepay-webhook")
+          .ignoringRequestMatchers(
+            "/api/payments/sepay-webhook",
+            "/api/payments/payos/webhook"
+          )
       )
       .authorizeHttpRequests(a ->
         a
@@ -94,6 +97,7 @@ public class SecurityConfig {
             "/error",
             "/api/auth/**",
             "/api/payments/sepay-webhook",
+            "/api/payments/payos/webhook",
             "/oauth2/**",
             "/login/oauth2/**"
           )

@@ -103,8 +103,13 @@ export function CourseFormFields({
             step={10000}
             value={form.price}
             onChange={(v) => set("price", v ?? 0)}
-            formatter={(v) => `${v}`.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ".") + " ₫"}
-            parser={(v) => Number(String(v).replace(/[^\\d]/g, "")) || 0}
+            formatter={(v) =>
+              v !== undefined && v !== null && v !== ""
+                ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                : ""
+            }
+            parser={(v) => (v ? v.replace(/\./g, "").replace(/[^\d]/g, "") : "")}
+            addonAfter="₫"
           />
         </Field>
       </div>

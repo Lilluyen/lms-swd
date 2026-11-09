@@ -136,6 +136,8 @@ public class CourseApi extends BaseController {
                 preview.id = l.id;
                 preview.title = l.title;
                 preview.position = l.position;
+                preview.contentType = l.contentType;
+                preview.durationMinutes = l.durationMinutes;
                 return preview;
               })
               .toList()

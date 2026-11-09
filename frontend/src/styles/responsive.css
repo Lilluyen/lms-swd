@@ -17,6 +17,8 @@
 .question-ai-criteria {
   position: sticky;
   top: 88px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .panel-heading,
@@ -58,11 +60,16 @@
   flex: 0 0 28px;
   width: 28px;
   height: 28px;
-  background: var(--purple);
-  color: white;
+  background: var(--purple, #6d28d9);
+  color: #ffffff;
   border: 2px solid var(--ink);
+  font-family: var(--display);
+  font-size: 14px;
   font-weight: 800;
+  line-height: 1;
   box-shadow: 2px 2px 0 var(--ink);
+  border-radius: 0;
+  user-select: none;
 }
 
 .required-note {
@@ -75,13 +82,15 @@
 }
 
 .compact-three {
-  grid-template-columns: 1.25fr 1fr 0.7fr;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.7fr);
 }
 
 .context-source {
   margin: 8px 0 18px;
   padding-top: 18px;
   border-top: 2px solid var(--ink);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .context-source > .muted {
@@ -90,10 +99,52 @@
 }
 
 .lesson-picker {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-bottom: 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.lesson-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lesson-picker-row-action {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.lesson-picker .ant-select {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.lesson-picker .ant-select-selector {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.lesson-picker .ant-select-selection-item {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.lesson-picker-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .lesson-error {
@@ -105,6 +156,10 @@
 .ai-context-editor {
   line-height: 1.65 !important;
   resize: vertical !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  word-break: break-word !important;
 }
 
 .question-ai-results {
@@ -323,6 +378,7 @@
   .teacher-course-actions {
     grid-template-columns: 1fr 1fr;
   }
+  .teacher-course-actions .btn-manage-content,
   .teacher-course-actions .ant-btn-primary {
     grid-column: 1 / -1;
   }
@@ -427,9 +483,16 @@
   .form-grid {
     grid-template-columns: 1fr;
   }
-  .compact-three,
-  .lesson-picker {
+  .compact-three {
     grid-template-columns: 1fr;
+  }
+  .lesson-picker-row,
+  .lesson-picker-row-action {
+    grid-template-columns: 1fr;
+  }
+  .lesson-picker-btn {
+    width: 100%;
+    justify-content: center;
   }
   .question-draft-card {
     padding: 12px;

@@ -149,7 +149,32 @@ export function CourseEditor({ courseId, onSaved, onCancel }) {
         open={aiOpen}
         defaultContentType="COURSE_DESCRIPTION"
         defaults={{ topic: form.title, level: form.level, context: form.context, courseId: courseId || undefined }}
-        onAccept={(text) => { set("description", text); message.success("Đã áp dụng nội dung AI"); }}
+        onAccept={(text, aiForm) => {
+          setForm((prev) => {
+            const next = { ...prev, description: text };
+            if (!prev.title?.trim() && aiForm?.topic?.trim()) {
+              next.title = aiForm.topic.trim();
+            }
+            if (aiForm?.level) {
+              next.level = aiForm.level;
+            }
+            if (!prev.context?.trim() && aiForm?.context?.trim()) {
+              next.context = aiForm.context.trim();
+            }
+            if (!prev.category?.trim()) {
+              next.category = "Công nghệ thông tin";
+            }
+            return next;
+          });
+          setErrors((e) => ({
+            ...e,
+            description: undefined,
+            title: undefined,
+            level: undefined,
+            category: undefined,
+          }));
+          message.success("Đã áp dụng nội dung AI và tự động điền các trường");
+        }}
         onClose={() => setAiOpen(false)}
       />
     </>

@@ -169,6 +169,8 @@ ALTER TABLE quiz_attempts ADD started_at DATETIME(6);
 ALTER TABLE quiz_attempt_answers ADD question_text VARCHAR(3000), ADD explanation VARCHAR(3000), ADD selected_text VARCHAR(255), ADD correct_text VARCHAR(255), ADD correct BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE payment_transactions ADD transaction_reference VARCHAR(255) UNIQUE, ADD payment_date DATETIME(6);
 ALTER TABLE payment_transactions ADD expires_at DATETIME(6), ADD cancelled_at DATETIME(6), ADD paid_amount DECIMAL(38,2), ADD reconciliation_note VARCHAR(500);
+ALTER TABLE payment_transactions ADD original_amount DECIMAL(38,2), ADD discount_amount DECIMAL(38,2) DEFAULT 0, ADD voucher_code VARCHAR(100), ADD webhook_payload VARCHAR(2000);
+ALTER TABLE enrollments ADD status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE', ADD archived BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE TABLE IF NOT EXISTS wishlist_items (
   id BIGINT AUTO_INCREMENT PRIMARY KEY, student_id BIGINT NOT NULL, course_id BIGINT NOT NULL, created_at DATETIME(6),
   UNIQUE KEY uq_wishlist_student_course(student_id, course_id),

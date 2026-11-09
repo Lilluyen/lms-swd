@@ -1,12 +1,6 @@
 import React from "react";
 import { Button, Modal, Space } from "antd";
-import {
-  ArrowRight,
-  BrainCircuit,
-  Clock,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, BrainCircuit, Clock, Plus, Sparkles } from "lucide-react";
 import { Empty, Field, PageTitle } from "../components/common";
 
 export function QuizzesPage({
@@ -39,7 +33,7 @@ export function QuizzesPage({
               setPage("edit-quiz");
             }}
           >
-            <Plus size={17} /> Tạo quiz từ ngân hàng
+            <Plus size={17} /> Tạo quiz
           </button>
         ) : (
           <button
@@ -85,9 +79,7 @@ export function QuizzesPage({
           </div>
         ))}
       </div>
-      {!quizzes.length && (
-        <Empty text="Chưa có quiz. Hãy tạo quiz đầu tiên." />
-      )}
+      {!quizzes.length && <Empty text="Chưa có quiz. Hãy tạo quiz đầu tiên." />}
     </>
   );
 }
@@ -98,20 +90,30 @@ export function QuizEditorPage({
   setForm,
   questions,
   saveQuiz,
+  busy,
+  generateTeacherQuiz,
 }) {
   return (
     <>
-      <PageTitle kicker="LUYỆN TẬP" title="Tạo quiz mới" />
-      <div className="editor">
+      <PageTitle
+        kicker="LUYỆN TẬP"
+        title={form.id ? "Chỉnh sửa quiz" : "Tạo quiz mới"}
+        desc="Nhập tiêu đề và môn học để AI soạn câu hỏi, hoặc chọn từ ngân hàng."
+      />
+      <fieldset
+        className="editor"
+        disabled={busy}
+        style={{ border: 0, minWidth: 0 }}
+      >
         <Field
           label="Tiêu đề"
           value={form.title}
-          set={(v) => setForm({ ...form, title: v })}
+          set={(v) => setForm({ ...form, title: v, aiQuestions: undefined })}
         />
         <Field
           label="Môn học"
           value={form.subject}
-          set={(v) => setForm({ ...form, subject: v })}
+          set={(v) => setForm({ ...form, subject: v, aiQuestions: undefined })}
         />
         <Field
           label="Thời gian (phút)"
@@ -121,24 +123,127 @@ export function QuizEditorPage({
         />
         {teacher ? (
           <>
-            <label>Chọn câu hỏi từ ngân hàng</label>
-            {questions.map((x) => (
-              <label className="check" key={x.question.id}>
-                <input
-                  type="checkbox"
-                  checked={form.questionIds?.includes(x.question.id)}
-                  onChange={(e) =>
+            {!form.id && (
+              <>
+                <h3>Tạo câu hỏi bằng AI</h3>
+                <p className="muted">
+                  AI dựa trên cả tiêu đề và môn học. Xem lại bản nháp trước khi
+                  lưu; câu hỏi sẽ được thêm vào ngân hàng của bạn cùng Quiz.
+                </p>
+                <Field
+                  label="Số câu hỏi AI (1–20)"
+                  type="number"
+                  value={form.aiQuantity ?? 5}
+                  set={(v) =>
                     setForm({
                       ...form,
-                      questionIds: e.target.checked
-                        ? [...form.questionIds, x.question.id]
-                        : form.questionIds.filter((v) => v !== x.question.id),
+                      aiQuantity: Number(v),
+                      aiQuestions: undefined,
                     })
                   }
                 />
-                {x.question.content}
-              </label>
-            ))}
+                <label htmlFor="quiz-ai-difficulty">Độ khó</label>
+                <select
+                  id="quiz-ai-difficulty"
+                  value={form.aiDifficulty || "MEDIUM"}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      aiDifficulty: e.target.value,
+                      aiQuestions: undefined,
+                    })
+                  }
+                >
+                  <option value="EASY">Dễ</option>
+                  <option value="MEDIUM">Trung bình</option>
+                  <option value="HARD">Khó</option>
+                </select>
+                <button
+                  className="outline"
+                  disabled={
+                    busy ||
+                    !form.title?.trim() ||
+                    !form.subject?.trim() ||
+                    (form.aiQuantity ?? 5) < 1 ||
+                    (form.aiQuantity ?? 5) > 20 ||
+                    !Number.isInteger(form.aiQuantity ?? 5)
+                  }
+                  onClick={generateTeacherQuiz}
+                >
+                  <Sparkles size={17} />{" "}
+                  {busy
+                    ? "Đang tạo…"
+                    : form.aiQuestions
+                      ? "AI tạo lại câu hỏi"
+                      : "AI tạo câu hỏi"}
+                </button>
+              </>
+            )}
+            {form.aiQuestions && (
+              <section aria-label="Bản nháp câu hỏi AI">
+                <h3>Bản nháp AI · {form.aiQuestions.length} câu</h3>
+                {form.aiQuestions.map((q, index) => (
+                  <div className="take-card" key={index}>
+                    <h4>
+                      Câu {index + 1}: {q.content}
+                    </h4>
+                    <ol type="A">
+                      {q.answers.map((answer, i) => (
+                        <li key={i}>
+                          {answer.content}
+                          {answer.correct && <strong> — Đáp án đúng</strong>}
+                        </li>
+                      ))}
+                    </ol>
+                    <p>
+                      <strong>Giải thích:</strong> {q.explanation}
+                    </p>
+                    <Button
+                      danger
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          aiQuestions: form.aiQuestions.filter(
+                            (_, i) => i !== index,
+                          ),
+                        })
+                      }
+                    >
+                      Bỏ câu này
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  onClick={() => setForm({ ...form, aiQuestions: undefined })}
+                >
+                  Chọn từ ngân hàng thay thế
+                </Button>
+              </section>
+            )}
+            {!form.aiQuestions && (
+              <>
+                <label>Chọn câu hỏi từ ngân hàng</label>
+                {questions.map((x) => (
+                  <label className="check" key={x.question.id}>
+                    <input
+                      type="checkbox"
+                      checked={form.questionIds?.includes(x.question.id)}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          questionIds: e.target.checked
+                            ? [...form.questionIds, x.question.id]
+                            : form.questionIds.filter(
+                                (v) => v !== x.question.id,
+                              ),
+                        })
+                      }
+                    />
+                    {x.question.content}
+                  </label>
+                ))}
+              </>
+            )}
           </>
         ) : (
           <p className="muted">
@@ -146,10 +251,24 @@ export function QuizEditorPage({
             cá nhân; cần câu hỏi để làm bài.
           </p>
         )}
-        <button className="primary" onClick={saveQuiz}>
+        <button
+          className="primary"
+          onClick={saveQuiz}
+          disabled={
+            busy ||
+            !form.title?.trim() ||
+            !form.subject?.trim() ||
+            form.durationMinutes < 1 ||
+            form.durationMinutes > 180 ||
+            !Number.isInteger(form.durationMinutes) ||
+            !(form.aiQuestions
+              ? form.aiQuestions.length
+              : form.questionIds?.length)
+          }
+        >
           Lưu quiz
         </button>
-      </div>
+      </fieldset>
     </>
   );
 }
@@ -203,7 +322,8 @@ export function PracticeAiPage({ form, setForm, busy, generatePractice }) {
 export function TakeQuizPage({
   quizData,
   choices,
-  setChoices,
+  checkAnswer,
+  feedback,
   remaining,
   busy,
   submitQuiz,
@@ -222,6 +342,10 @@ export function TakeQuizPage({
         title={quizData.quiz.title}
         desc={`${quizData.questions.length} câu hỏi · ${quizData.quiz.durationMinutes} phút`}
       />
+      <p className="muted">
+        Chọn đáp án để xem đúng/sai và giải thích ngay. Mỗi câu được chốt sau
+        khi chọn và không thể đổi lại.
+      </p>
       {quizData.questions.map((q, i) => (
         <div className="take-card" key={q.id}>
           <span className="kicker">
@@ -231,19 +355,33 @@ export function TakeQuizPage({
           {q.answers.map((a) => (
             <label
               key={a.id}
-              className={
-                "choice " + (choices[q.id] === a.id ? "selected" : "")
-              }
+              className={"choice " + (choices[q.id] === a.id ? "selected" : "")}
             >
               <input
                 type="radio"
                 name={"q" + q.id}
                 checked={choices[q.id] === a.id}
-                onChange={() => setChoices({ ...choices, [q.id]: a.id })}
+                disabled={busy || remaining === 0 || Boolean(feedback[q.id])}
+                onChange={() => checkAnswer(q.id, a.id)}
               />
               {a.content}
             </label>
           ))}
+          {feedback[q.id] && (
+            <div
+              className={`quiz-feedback ${feedback[q.id].correct ? "is-correct" : "is-incorrect"}`}
+              role="status"
+            >
+              <strong>
+                {feedback[q.id].correct ? "✓ Chính xác!" : "✗ Chưa chính xác"}
+              </strong>
+              <p>Đáp án đúng: {feedback[q.id].correctText}</p>
+              <p>
+                {feedback[q.id].explanation ||
+                  "Giáo viên chưa thêm giải thích cho câu này."}
+              </p>
+            </div>
+          )}
         </div>
       ))}
       <button

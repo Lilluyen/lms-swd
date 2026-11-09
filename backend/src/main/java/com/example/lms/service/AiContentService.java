@@ -1,31 +1,33 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.AiRequest;
+import com.example.lms.dto.*;
 import com.example.lms.entity.Course;
 import com.example.lms.entity.Lesson;
+import com.example.lms.entity.Module;
 import com.example.lms.entity.User;
 import com.example.lms.integration.Integrations;
 import com.example.lms.web.FieldErrors;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /**
- * "Generate with AI" for course descriptions and lesson content.
- *
- * The frontend never talks to Gemini: the API key stays on the server. The
- * teacher can supply context (audience, tools, scope) and the course also keeps
- * its own reusable context, so generated content matches the real course
- * instead of being generic.
+ * "Generate with AI" for course descriptions, module descriptions and lesson content,
+ * plus interactive AI Course Copilot chat for full syllabus generation.
  */
 @Service
 public class AiContentService {
 
   public static final String COURSE = "COURSE_DESCRIPTION";
+  public static final String MODULE = "MODULE_DESCRIPTION";
   public static final String LESSON = "LESSON_CONTENT";
 
-  static final List<String> TYPES = List.of(COURSE, LESSON);
+  static final List<String> TYPES = List.of(COURSE, MODULE, LESSON);
   static final List<String> LEVELS = List.of(
     "BEGINNER",
     "INTERMEDIATE",
@@ -37,13 +39,25 @@ public class AiContentService {
 
   private final Integrations integrations;
   private final ContentAccessService content;
+  private final CourseContentService courseContent;
+  private final ModuleContentService moduleContent;
+  private final LessonContentService lessonContent;
+  private final ObjectMapper objectMapper;
 
   public AiContentService(
     Integrations integrations,
-    ContentAccessService content
+    ContentAccessService content,
+    CourseContentService courseContent,
+    ModuleContentService moduleContent,
+    LessonContentService lessonContent,
+    ObjectMapper objectMapper
   ) {
     this.integrations = integrations;
     this.content = content;
+    this.courseContent = courseContent;
+    this.moduleContent = moduleContent;
+    this.lessonContent = lessonContent;
+    this.objectMapper = objectMapper;
   }
 
   public Map<String, Object> generate(AiRequest request, User teacher) {
@@ -79,7 +93,7 @@ public class AiContentService {
     );
     if (context.length() > CONTEXT_MAX) errors.put(
       "context",
-        "Ngữ cảnh / nội dung tham khảo tối đa " + CONTEXT_MAX + " ký tự"
+      "Ngữ cảnh / nội dung tham khảo tối đa " + CONTEXT_MAX + " ký tự"
     );
     if (!LEVELS.contains(level)) errors.put("level", "Cấp độ không hợp lệ");
     if (!TYPES.contains(type)) errors.put(
@@ -92,7 +106,7 @@ public class AiContentService {
     );
     if (!errors.isEmpty()) throw new FieldErrors(errors);
 
-    int max = type.equals(COURSE) ? 2000 : 10000;
+    int max = type.equals(COURSE) ? 2000 : type.equals(MODULE) ? 500 : 10000;
     String scope = scope(course, lesson);
     String prompt = buildPrompt(
       topic,
@@ -106,7 +120,7 @@ public class AiContentService {
     );
     String raw = integrations.generateText(
       prompt,
-      type.equals(COURSE) ? 1600 : 4096
+      type.equals(COURSE) ? 1600 : type.equals(MODULE) ? 600 : 4096
     );
     String text = clean(raw);
     if (text.length() < 10) throw new FieldErrors(
@@ -132,6 +146,501 @@ public class AiContentService {
         " ký tự. Hãy chỉnh sửa bớt hoặc tạo lại."
     );
     return out;
+  }
+
+  /**
+   * Conversational AI Course Copilot: discusses requirements with the teacher
+   * and proposes/updates a full course syllabus draft.
+   */
+  public CourseChatResponse chatCourse(CourseChatRequest request, User teacher) {
+    if (request == null || request.message() == null || request.message().trim().isBlank()) {
+      throw new FieldErrors("message", "Nội dung tin nhắn không được để trống");
+    }
+    String message = request.message().trim();
+    String prompt = buildCourseChatPrompt(message, request.history(), request.currentDraft());
+    String raw = integrations.generateText(prompt, 3500);
+
+    Pattern pattern = Pattern.compile("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```");
+    Matcher matcher = pattern.matcher(raw);
+    CourseDraft parsedDraft = null;
+    String replyText = raw;
+
+    if (matcher.find()) {
+      String jsonText = matcher.group(1);
+      try {
+        parsedDraft = objectMapper.readValue(jsonText, CourseDraft.class);
+        replyText = matcher.replaceFirst("").trim();
+      } catch (Exception e) {
+        parsedDraft = request.currentDraft();
+      }
+    } else {
+      parsedDraft = request.currentDraft();
+    }
+
+    if (replyText.isBlank()) {
+      replyText = "Dưới đây là dàn ý khóa học đã được cập nhật dựa trên yêu cầu của thầy/cô:";
+    }
+
+    return new CourseChatResponse(replyText, parsedDraft);
+  }
+
+  /**
+   * Creates a complete Course entity, all its Modules and Lessons in one transaction.
+   */
+  public Map<String, Object> createCourseFromDraft(CourseDraft draft, User teacher) {
+    if (draft == null || draft.title() == null || draft.title().trim().length() < 3) {
+      throw new FieldErrors("title", "Tên khóa học phải từ 5 đến 100 ký tự");
+    }
+    String title = draft.title().trim();
+    if (title.length() < 5) title = title + " Khóa học";
+    if (title.length() > 100) title = title.substring(0, 100);
+
+    String desc = draft.description() != null ? draft.description().trim() : "";
+    if (desc.length() < 10) desc = "Khóa học " + title + " được thiết kế toàn diện với sự đồng hành của AI Copilot.";
+    if (desc.length() > 2000) desc = desc.substring(0, 2000);
+
+    String level = draft.level() != null && LEVELS.contains(draft.level().toUpperCase())
+      ? draft.level().toUpperCase()
+      : "BEGINNER";
+    BigDecimal price = draft.price() != null && draft.price() >= 0
+      ? BigDecimal.valueOf(draft.price())
+      : BigDecimal.ZERO;
+    String category = draft.category() != null && !draft.category().isBlank()
+      ? draft.category().trim()
+      : "Chung";
+    if (category.length() > 100) category = category.substring(0, 100);
+
+    String context = draft.context() != null ? draft.context().trim() : "";
+    if (context.length() > 2000) context = context.substring(0, 2000);
+
+    CourseInput courseInput = new CourseInput(
+      title,
+      desc,
+      level,
+      price,
+      null,
+      "DRAFT",
+      category,
+      context
+    );
+    Course course = courseContent.create(teacher, courseInput);
+
+    int moduleCount = 0;
+    int lessonCount = 0;
+
+    if (draft.modules() != null) {
+      for (CourseDraft.ModuleDraft mDraft : draft.modules()) {
+        if (mDraft.title() == null || mDraft.title().trim().isBlank()) continue;
+        String mTitle = mDraft.title().trim();
+        if (mTitle.length() < 3) mTitle = "Module: " + mTitle;
+        if (mTitle.length() > 100) mTitle = mTitle.substring(0, 100);
+        String mDesc = mDraft.description() != null ? mDraft.description().trim() : "";
+        if (mDesc.length() > 500) mDesc = mDesc.substring(0, 500);
+
+        Module module = moduleContent.addModule(course, new ModuleInput(mTitle, mDesc));
+        moduleCount++;
+
+        if (mDraft.lessons() != null) {
+          for (CourseDraft.LessonDraft lDraft : mDraft.lessons()) {
+            if (lDraft.title() == null || lDraft.title().trim().isBlank()) continue;
+            String lTitle = lDraft.title().trim();
+            if (lTitle.length() < 3) lTitle = "Bài: " + lTitle;
+            if (lTitle.length() > 100) lTitle = lTitle.substring(0, 100);
+
+            String cType = lDraft.contentType() != null && List.of("TEXT", "VIDEO", "FILE").contains(lDraft.contentType().toUpperCase())
+              ? lDraft.contentType().toUpperCase()
+              : "TEXT";
+            String lContent = lDraft.content() != null && lDraft.content().trim().length() >= 10
+              ? lDraft.content().trim()
+              : "Nội dung cho bài học " + lTitle + ". Giáo viên có thể bổ sung thêm chi tiết tại đây.";
+            if (lContent.length() > 10000) lContent = lContent.substring(0, 10000);
+            int duration = lDraft.durationMinutes() != null && lDraft.durationMinutes() > 0 ? lDraft.durationMinutes() : 15;
+
+            LessonInput lessonInput = new LessonInput(
+              module.id,
+              lTitle,
+              cType,
+              lContent,
+              null,
+              duration,
+              null,
+              null,
+              null
+            );
+            lessonContent.addLesson(module, lessonInput);
+            lessonCount++;
+          }
+        }
+      }
+    }
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("id", course.id);
+    out.put("title", course.title);
+    out.put("moduleCount", moduleCount);
+    out.put("lessonCount", lessonCount);
+    return out;
+  }
+
+  public CurriculumAiResponse generateCurriculum(CurriculumAiRequest request, User teacher) {
+    Course course = null;
+    if (request.courseId() != null) {
+      course = content.ownedCourse(request.courseId(), teacher);
+    }
+    String topic = trim(request.topic());
+    if (topic.isBlank() && course != null) topic = trim(course.title);
+    if (topic.length() < 3) {
+      throw new FieldErrors("topic", "Chủ đề khóa học phải từ 3 ký tự trở lên");
+    }
+    if (topic.length() > 200) topic = topic.substring(0, 200);
+
+    String courseDesc = course != null && course.description != null ? course.description.trim() : "";
+    String courseCtx = course != null && course.context != null ? course.context.trim() : "";
+    String userContext = trim(request.context());
+
+    StringBuilder specBuilder = new StringBuilder();
+    if (!courseDesc.isBlank()) {
+      specBuilder.append(courseDesc);
+    }
+    if (!courseCtx.isBlank() && !courseCtx.equals(courseDesc)) {
+      if (specBuilder.length() > 0) specBuilder.append("\n");
+      specBuilder.append("Ngữ cảnh giảng dạy: ").append(courseCtx);
+    }
+    if (!userContext.isBlank() && !userContext.equals(courseDesc) && !userContext.equals(courseCtx)) {
+      if (specBuilder.length() > 0) specBuilder.append("\n");
+      specBuilder.append("Định hướng bổ sung: ").append(userContext);
+    }
+    String fullSpec = specBuilder.toString();
+    if (fullSpec.length() > CONTEXT_MAX) fullSpec = fullSpec.substring(0, CONTEXT_MAX);
+
+    int moduleCount = request.moduleCount() != null && request.moduleCount() >= 1 && request.moduleCount() <= 10
+      ? request.moduleCount()
+      : 4;
+    int lessonsPerModule = request.lessonsPerModule() != null && request.lessonsPerModule() >= 1 && request.lessonsPerModule() <= 10
+      ? request.lessonsPerModule()
+      : 3;
+    String language = request.language() != null && !request.language().isBlank() ? request.language().trim() : "Vietnamese";
+    String level = course != null && course.level != null ? course.level : "BEGINNER";
+
+    StringBuilder sb = new StringBuilder();
+    sb.append("You are an expert curriculum architect and instructional designer for university & professional LMS courses.\n");
+    sb.append("TASK: You must analyze the following DETAILED COURSE SPECIFICATION (Đặc tả khóa học) and systematically dissect it into a coherent, comprehensive curriculum skeleton of exactly ")
+      .append(moduleCount).append(" modules, with exactly ")
+      .append(lessonsPerModule).append(" lessons in each module.\n\n");
+    sb.append("COURSE DETAILS & SPECIFICATION (ĐẶC TẢ CHI TIẾT):\n");
+    sb.append("- Course Title: ").append(topic).append("\n");
+    sb.append("- Category: ").append(course != null && course.category != null ? course.category : "Chuyên môn").append("\n");
+    sb.append("- Target Level: ").append(level).append("\n");
+    sb.append("- Language: ").append(language).append("\n");
+    if (!fullSpec.isBlank()) {
+      sb.append("\n=== FULL COURSE SPECIFICATION / ĐẶC TẢ NỘI DUNG KHÓA HỌC ===\n");
+      sb.append(fullSpec).append("\n");
+      sb.append("============================================================\n\n");
+    }
+    sb.append("CRITICAL INSTRUCTION - STRICT ALIGNMENT WITH COURSE SPECIFICATION:\n");
+    sb.append("1. You MUST directly derive all modules and lessons from the concepts, technologies, skills, and goals described in the Course Specification above.\n");
+    sb.append("2. Divide the topics mentioned in the specification in chronological pedagogical progression (e.g., Foundations -> Core Architecture -> Advanced Features / Error Handling / Middleware -> Real-world Practical Project).\n");
+    sb.append("3. Every module title (3-100 chars) must represent a major milestone from the course specification.\n");
+    sb.append("4. Each lesson must have realistic study time and a detailed syllabus/summary in Markdown covering specific skills described in the specification.\n");
+    sb.append("5. You MUST reply ONLY with a single valid JSON block enclosed in ```json ... ```:\n");
+    sb.append("```json\n");
+    sb.append("{\n");
+    sb.append("  \"modules\": [\n");
+    sb.append("    {\n");
+    sb.append("      \"title\": \"Tên module...\",\n");
+    sb.append("      \"description\": \"Mục tiêu và kiến thức module...\",\n");
+    sb.append("      \"lessons\": [\n");
+    sb.append("        {\n");
+    sb.append("          \"title\": \"Tên bài học...\",\n");
+    sb.append("          \"contentType\": \"TEXT\",\n");
+    sb.append("          \"durationMinutes\": 15,\n");
+    sb.append("          \"content\": \"Tóm tắt kiến thức cốt lõi của bài học...\"\n");
+    sb.append("        }\n");
+    sb.append("      ]\n");
+    sb.append("    }\n");
+    sb.append("  ]\n");
+    sb.append("}\n");
+    sb.append("```\n");
+
+    String raw = integrations.generateText(sb.toString(), 4000);
+    List<CourseDraft.ModuleDraft> modules = parseModulesJson(raw);
+    if (modules == null || modules.isEmpty()) {
+      throw new FieldErrors("topic", "AI không thể tạo cấu trúc module hợp lệ. Vui lòng thử lại với chủ đề chi tiết hơn.");
+    }
+    return new CurriculumAiResponse(topic, modules);
+  }
+
+  public Map<String, Object> applyCurriculum(Long courseId, ApplyCurriculumRequest request, User teacher) {
+    Course course = content.ownedCourse(courseId, teacher);
+    if (request == null || request.modules() == null || request.modules().isEmpty()) {
+      throw new FieldErrors("modules", "Danh sách module cần áp dụng không được để trống");
+    }
+    int addedModules = 0;
+    int addedLessons = 0;
+    for (CourseDraft.ModuleDraft mDraft : request.modules()) {
+      if (mDraft.title() == null || mDraft.title().trim().isBlank()) continue;
+      String mTitle = mDraft.title().trim();
+      if (mTitle.length() < 3) mTitle = "Module: " + mTitle;
+      if (mTitle.length() > 100) mTitle = mTitle.substring(0, 100);
+      String mDesc = mDraft.description() != null ? mDraft.description().trim() : "";
+      if (mDesc.length() > 500) mDesc = mDesc.substring(0, 500);
+
+      Module module = moduleContent.addModule(course, new ModuleInput(mTitle, mDesc));
+      addedModules++;
+
+      if (mDraft.lessons() != null) {
+        for (CourseDraft.LessonDraft lDraft : mDraft.lessons()) {
+          if (lDraft.title() == null || lDraft.title().trim().isBlank()) continue;
+          String lTitle = lDraft.title().trim();
+          if (lTitle.length() < 3) lTitle = "Bài: " + lTitle;
+          if (lTitle.length() > 100) lTitle = lTitle.substring(0, 100);
+          String cType = lDraft.contentType() != null && List.of("TEXT", "VIDEO", "FILE").contains(lDraft.contentType().toUpperCase())
+            ? lDraft.contentType().toUpperCase()
+            : "TEXT";
+          String lContent = lDraft.content() != null && lDraft.content().trim().length() >= 10
+            ? lDraft.content().trim()
+            : "Nội dung bài học " + lTitle + ". Giáo viên có thể bổ sung thêm chi tiết tại đây.";
+          if (lContent.length() > 10000) lContent = lContent.substring(0, 10000);
+          int duration = lDraft.durationMinutes() != null && lDraft.durationMinutes() > 0 ? lDraft.durationMinutes() : 15;
+
+          LessonInput lessonInput = new LessonInput(
+            module.id,
+            lTitle,
+            cType,
+            lContent,
+            null,
+            duration,
+            null,
+            null,
+            null
+          );
+          lessonContent.addLesson(module, lessonInput);
+          addedLessons++;
+        }
+      }
+    }
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("course", courseContent.summary(course));
+    out.put("modules", moduleContent.moduleList(course));
+    out.put("addedModules", addedModules);
+    out.put("addedLessons", addedLessons);
+    return out;
+  }
+
+  public LessonBatchAiResponse generateLessonsForModule(LessonBatchAiRequest request, User teacher) {
+    if (request == null || request.moduleId() == null) {
+      throw new FieldErrors("moduleId", "Thiếu mã module mục tiêu");
+    }
+    Module module = content.ownedModule(request.moduleId(), teacher);
+    Course course = module.course;
+
+    String topic = trim(request.topic());
+    if (topic.isBlank()) topic = trim(module.title);
+    if (topic.length() < 3) topic = module.title;
+
+    String context = trim(request.context());
+    if (context.isBlank() && course.context != null) context = trim(course.context);
+
+    int count = request.lessonCount() != null && request.lessonCount() >= 1 && request.lessonCount() <= 10
+      ? request.lessonCount()
+      : 4;
+    String language = request.language() != null && !request.language().isBlank() ? request.language().trim() : "Vietnamese";
+
+    StringBuilder sb = new StringBuilder();
+    sb.append("You are an expert teacher and curriculum designer for LMS courses.\n");
+    sb.append("TASK: Generate a batch of exactly ").append(count).append(" practical, well-structured lessons to fill into the module below.\n\n");
+    sb.append("MODULE INFO:\n");
+    sb.append("- Module Title: ").append(module.title).append("\n");
+    if (module.description != null && !module.description.isBlank()) {
+      sb.append("- Module Description: ").append(module.description).append("\n");
+    }
+    sb.append("- Belonging to Course: ").append(course.title).append(" (Level: ").append(course.level != null ? course.level : "BEGINNER").append(")\n");
+    if (course.description != null && !course.description.isBlank()) {
+      sb.append("- Course Overall Specification / Đặc tả khóa học: ").append(course.description.trim()).append("\n");
+    }
+    if (!context.isBlank()) {
+      sb.append("- Teaching Context & Focus: ").append(context).append("\n");
+    }
+    sb.append("- Specific Topic / Emphasis: ").append(topic).append("\n");
+    sb.append("- Language: ").append(language).append("\n\n");
+    sb.append("RULES:\n");
+    sb.append("1. Each lesson must have a distinct, practical topic progressing systematically.\n");
+    sb.append("2. 'title': 3-100 characters.\n");
+    sb.append("3. 'contentType': 'TEXT' (or 'VIDEO').\n");
+    sb.append("4. 'durationMinutes': 10 to 45.\n");
+    sb.append("5. 'content': Comprehensive lesson outline, summary or key concepts formatted in Markdown (at least 20 characters).\n");
+    sb.append("6. You MUST return ONLY a single JSON code block enclosed in ```json ... ```:\n");
+    sb.append("```json\n");
+    sb.append("{\n");
+    sb.append("  \"lessons\": [\n");
+    sb.append("    {\n");
+    sb.append("      \"title\": \"Bài: ...\",\n");
+    sb.append("      \"contentType\": \"TEXT\",\n");
+    sb.append("      \"durationMinutes\": 15,\n");
+    sb.append("      \"content\": \"Nội dung chi tiết của bài học...\"\n");
+    sb.append("    }\n");
+    sb.append("  ]\n");
+    sb.append("}\n");
+    sb.append("```\n");
+
+    String raw = integrations.generateText(sb.toString(), 3500);
+    List<CourseDraft.LessonDraft> lessons = parseLessonsJson(raw);
+    if (lessons == null || lessons.isEmpty()) {
+      throw new FieldErrors("topic", "AI không thể tạo danh sách bài học. Vui lòng thử lại với yêu cầu chi tiết hơn.");
+    }
+    return new LessonBatchAiResponse(module.title, lessons);
+  }
+
+  public Map<String, Object> applyLessons(Long moduleId, ApplyLessonsRequest request, User teacher) {
+    Module module = content.ownedModule(moduleId, teacher);
+    if (request == null || request.lessons() == null || request.lessons().isEmpty()) {
+      throw new FieldErrors("lessons", "Danh sách bài học cần thêm không được để trống");
+    }
+    int added = 0;
+    for (CourseDraft.LessonDraft lDraft : request.lessons()) {
+      if (lDraft.title() == null || lDraft.title().trim().isBlank()) continue;
+      String lTitle = lDraft.title().trim();
+      if (lTitle.length() < 3) lTitle = "Bài: " + lTitle;
+      if (lTitle.length() > 100) lTitle = lTitle.substring(0, 100);
+      String cType = lDraft.contentType() != null && List.of("TEXT", "VIDEO", "FILE").contains(lDraft.contentType().toUpperCase())
+        ? lDraft.contentType().toUpperCase()
+        : "TEXT";
+      String lContent = lDraft.content() != null && lDraft.content().trim().length() >= 10
+        ? lDraft.content().trim()
+        : "Nội dung bài học " + lTitle + ". Giáo viên có thể bổ sung thêm chi tiết tại đây.";
+      if (lContent.length() > 10000) lContent = lContent.substring(0, 10000);
+      int duration = lDraft.durationMinutes() != null && lDraft.durationMinutes() > 0 ? lDraft.durationMinutes() : 15;
+
+      LessonInput lessonInput = new LessonInput(
+        module.id,
+        lTitle,
+        cType,
+        lContent,
+        null,
+        duration,
+        null,
+        null,
+        null
+      );
+      lessonContent.addLesson(module, lessonInput);
+      added++;
+    }
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("lessons", lessonContent.lessonViews(module.id));
+    out.put("modules", moduleContent.moduleList(module.course));
+    out.put("addedLessons", added);
+    return out;
+  }
+
+  private List<CourseDraft.ModuleDraft> parseModulesJson(String raw) {
+    if (raw == null || raw.isBlank()) return List.of();
+    Pattern pattern = Pattern.compile("(?s)```(?:json)?\\s*(\\{.*?\\}|\\[.*?\\])\\s*```");
+    Matcher matcher = pattern.matcher(raw);
+    String json = null;
+    if (matcher.find()) {
+      json = matcher.group(1).trim();
+    } else {
+      int firstBrace = raw.indexOf('{');
+      int lastBrace = raw.lastIndexOf('}');
+      if (firstBrace >= 0 && lastBrace > firstBrace) {
+        json = raw.substring(firstBrace, lastBrace + 1);
+      }
+    }
+    if (json == null) return List.of();
+
+    try {
+      var root = objectMapper.readTree(json);
+      var modulesNode = root.has("modules") ? root.get("modules") : root;
+      if (modulesNode.isArray()) {
+        return objectMapper.readerForListOf(CourseDraft.ModuleDraft.class).readValue(modulesNode);
+      }
+    } catch (Exception ignored) {}
+    return List.of();
+  }
+
+  private List<CourseDraft.LessonDraft> parseLessonsJson(String raw) {
+    if (raw == null || raw.isBlank()) return List.of();
+    Pattern pattern = Pattern.compile("(?s)```(?:json)?\\s*(\\{.*?\\}|\\[.*?\\])\\s*```");
+    Matcher matcher = pattern.matcher(raw);
+    String json = null;
+    if (matcher.find()) {
+      json = matcher.group(1).trim();
+    } else {
+      int firstBrace = raw.indexOf('{');
+      int lastBrace = raw.lastIndexOf('}');
+      if (firstBrace >= 0 && lastBrace > firstBrace) {
+        json = raw.substring(firstBrace, lastBrace + 1);
+      }
+    }
+    if (json == null) return List.of();
+
+    try {
+      var root = objectMapper.readTree(json);
+      var lessonsNode = root.has("lessons") ? root.get("lessons") : root;
+      if (lessonsNode.isArray()) {
+        return objectMapper.readerForListOf(CourseDraft.LessonDraft.class).readValue(lessonsNode);
+      }
+    } catch (Exception ignored) {}
+    return List.of();
+  }
+
+  private String buildCourseChatPrompt(String message, List<CourseChatRequest.ChatMessage> history, CourseDraft currentDraft) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("You are an expert instructional designer and curriculum planner assistant for LMS teachers.\n");
+    sb.append("The teacher is conversing with you in Vietnamese to design or refine a complete course outline (Syllabus) containing Modules and Lessons.\n\n");
+    sb.append("RULES:\n");
+    sb.append("1. Always respond politely, pedagogically and supportively in Vietnamese.\n");
+    sb.append("2. In your conversational text, explain your rationale, structure suggestions, or modifications.\n");
+    sb.append("3. CRITICAL: At the VERY END of your response, you MUST output a single JSON code block formatted as:\n");
+    sb.append("```json\n");
+    sb.append("{\n");
+    sb.append("  \"title\": \"Tên khóa học (5-100 ký tự)\",\n");
+    sb.append("  \"description\": \"Mô tả tổng quan khóa học (10-2000 ký tự)\",\n");
+    sb.append("  \"level\": \"BEGINNER\" | \"INTERMEDIATE\" | \"ADVANCED\",\n");
+    sb.append("  \"price\": 0,\n");
+    sb.append("  \"category\": \"Danh mục khóa học\",\n");
+    sb.append("  \"context\": \"Ngữ cảnh / đối tượng học viên\",\n");
+    sb.append("  \"modules\": [\n");
+    sb.append("    {\n");
+    sb.append("      \"title\": \"Tên module (3-100 ký tự)\",\n");
+    sb.append("      \"description\": \"Mô tả mục tiêu module (tối đa 500 ký tự)\",\n");
+    sb.append("      \"lessons\": [\n");
+    sb.append("        {\n");
+    sb.append("          \"title\": \"Tên bài học (3-100 ký tự)\",\n");
+    sb.append("          \"contentType\": \"TEXT\",\n");
+    sb.append("          \"content\": \"Tóm tắt nội dung bài học hoặc đề cương chi tiết (tối thiểu 10 ký tự)\",\n");
+    sb.append("          \"durationMinutes\": 15\n");
+    sb.append("        }\n");
+    sb.append("      ]\n");
+    sb.append("    }\n");
+    sb.append("  ]\n");
+    sb.append("}\n");
+    sb.append("```\n");
+    sb.append("4. If a current draft exists, keep all previously agreed modules and lessons unless the teacher explicitly asks to remove, update or replace them.\n\n");
+
+    if (currentDraft != null) {
+      try {
+        sb.append("CURRENT COURSE DRAFT IN PROGRESS:\n");
+        sb.append(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(currentDraft));
+        sb.append("\n\n");
+      } catch (Exception ignored) {}
+    }
+
+    if (history != null && !history.isEmpty()) {
+      sb.append("CONVERSATION HISTORY:\n");
+      for (CourseChatRequest.ChatMessage msg : history) {
+        sb.append(msg.role().equals("user") ? "Teacher: " : "Assistant: ");
+        sb.append(msg.content()).append("\n");
+      }
+      sb.append("\n");
+    }
+
+    sb.append("TEACHER'S LATEST MESSAGE:\n");
+    sb.append(message).append("\n\n");
+    sb.append("Please provide your helpful reply and the complete updated course draft JSON block:");
+    return sb.toString();
   }
 
   /** 2000 -> "2.000" for Vietnamese-facing messages. */
@@ -208,7 +717,9 @@ public class AiContentService {
     };
     String shape = type.equals(COURSE)
       ? "a course description for a course catalogue (2 to 4 short paragraphs)"
-      : "lesson content for a self-paced online lesson (plain prose, short paragraphs, optionally simple bullet lines starting with '-')";
+      : type.equals(MODULE)
+        ? "a module overview and objective summary for a course chapter (1 to 2 short paragraphs)"
+        : "lesson content for a self-paced online lesson (plain prose, short paragraphs, optionally simple bullet lines starting with '-')";
 
     StringBuilder prompt = new StringBuilder();
     prompt

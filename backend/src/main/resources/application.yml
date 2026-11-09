@@ -33,12 +33,12 @@ app:
   frontend: ${FRONTEND_URL:http://localhost:5173}
   sepay:
     token: ${SEPAY_API_TOKEN:}
-    account: ${SEPAY_ACCOUNT_NUMBER:}
-    bank: ${SEPAY_BANK_CODE:}
-    webhook-key: ${SEPAY_WEBHOOK_KEY:}
-    account-name: ${SEPAY_ACCOUNT_NAME:}
+    account: ${SEPAY_ACCOUNT_NUMBER:0388123456789}
+    bank: ${SEPAY_BANK_CODE:MB}
+    webhook-key: ${SEPAY_WEBHOOK_KEY:test-webhook-key}
+    account-name: ${SEPAY_ACCOUNT_NAME:LMS EDUCATION}
   gemini:
     key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
     timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:45}

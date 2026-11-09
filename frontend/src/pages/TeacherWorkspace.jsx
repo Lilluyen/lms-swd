@@ -1,6 +1,7 @@
 import React from "react";
 import {
   CourseEditor,
+  CourseAiStudio,
   LessonEditor,
   ModuleBoard,
   TeacherCourses,
@@ -23,6 +24,9 @@ export function TeacherWorkspace({
             setManage({});
             setPage("t-course-form");
           }}
+          onCopilot={() => {
+            setPage("t-course-copilot");
+          }}
           onEdit={(r) => {
             setManage({ courseId: r.id });
             setPage("t-course-form");
@@ -32,6 +36,16 @@ export function TeacherWorkspace({
             setPage("t-modules");
           }}
           onView={(r) => openCourse(r)}
+        />
+      )}
+      {page === "t-course-copilot" && (
+        <CourseAiStudio
+          onSaved={(courseId) => {
+            refresh();
+            setManage({ courseId });
+            setPage("t-modules");
+          }}
+          onCancel={() => go("t-courses")}
         />
       )}
       {page === "t-course-form" && (
