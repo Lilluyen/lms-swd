@@ -75,7 +75,10 @@ export function CourseAiStudio({ onSaved, onCancel }) {
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: res.reply || "Đã cập nhật dàn ý khóa học." },
+        {
+          role: "assistant",
+          content: res.reply || "Đã cập nhật dàn ý khóa học.",
+        },
       ]);
 
       if (res.draft) {
@@ -118,26 +121,23 @@ export function CourseAiStudio({ onSaved, onCancel }) {
 
   const moduleCount = draft?.modules?.length || 0;
   const lessonCount =
-    draft?.modules?.reduce(
-      (sum, m) => sum + (m.lessons?.length || 0),
-      0,
-    ) || 0;
+    draft?.modules?.reduce((sum, m) => sum + (m.lessons?.length || 0), 0) || 0;
 
   return (
     <>
       <Crumb
         items={[
           { label: "Khóa học của tôi", onClick: onCancel },
-          { label: "Tạo khóa học bằng AI Copilot" },
+          { label: "Tạo khóa học bằng AI Gemini" },
         ]}
       />
 
       <div className="page-title" style={{ marginBottom: 16 }}>
         <span className="kicker">AI INSTRUCTIONAL DESIGNER</span>
-        <h1>Trợ lý AI sáng tạo khóa học (Course Copilot)</h1>
+        <h1>Trợ lý AI sáng tạo khóa học (Course Gemini)</h1>
         <p>
-          Hội thoại cùng AI để lên dàn ý khung chương trình, tự động sinh các Module
-          và Bài học có cấu trúc sẵn trước khi lưu vào hệ thống.
+          Hội thoại cùng AI để lên dàn ý khung chương trình, tự động sinh các
+          Module và Bài học có cấu trúc sẵn trước khi lưu vào hệ thống.
         </p>
       </div>
 
@@ -187,7 +187,7 @@ export function CourseAiStudio({ onSaved, onCancel }) {
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 15 }}>
-                AI Course Copilot
+                AI Course Gemini
               </div>
               <div style={{ fontSize: 12, color: "#6b7280" }}>
                 Hỗ trợ thiết kế & tối ưu sư phạm
@@ -238,7 +238,9 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                   )}
                   <div
                     style={{
-                      background: isUser ? "var(--primary-color, #4f46e5)" : "#f3f4f6",
+                      background: isUser
+                        ? "var(--primary-color, #4f46e5)"
+                        : "#f3f4f6",
                       color: isUser ? "#fff" : "#1f2937",
                       padding: "10px 14px",
                       borderRadius: 14,
@@ -258,7 +260,9 @@ export function CourseAiStudio({ onSaved, onCancel }) {
             })}
 
             {chatting && (
-              <div style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}>
+              <div
+                style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}
+              >
                 <div
                   style={{
                     width: 28,
@@ -331,8 +335,12 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                       color: "#374151",
                       transition: "all 0.2s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#6366f1")}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e5e7eb")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.borderColor = "#6366f1")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.borderColor = "#e5e7eb")
+                    }
                   >
                     ✨ {s}
                   </button>
@@ -411,7 +419,9 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                 <Tag color="blue">{moduleCount} Modules</Tag>
                 <Tag color="purple">{lessonCount} Bài học</Tag>
                 {draft.level && (
-                  <Tag color="green">{LEVEL_LABEL[draft.level] || draft.level}</Tag>
+                  <Tag color="green">
+                    {LEVEL_LABEL[draft.level] || draft.level}
+                  </Tag>
                 )}
               </div>
             )}
@@ -447,7 +457,9 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                 />
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 20 }}
+              >
                 {/* Course Metadata Card */}
                 <Card
                   style={{
@@ -474,13 +486,15 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                     >
                       {draft.title || "Chưa đặt tên"}
                     </h2>
-                    {draft.category && (
-                      <Tag color="cyan">{draft.category}</Tag>
-                    )}
+                    {draft.category && <Tag color="cyan">{draft.category}</Tag>}
                   </div>
                   <Paragraph
                     ellipsis={{ rows: 3, expandable: true, symbol: "Xem thêm" }}
-                    style={{ color: "#4b5563", margin: "6px 0 10px", fontSize: 14 }}
+                    style={{
+                      color: "#4b5563",
+                      margin: "6px 0 10px",
+                      fontSize: 14,
+                    }}
                   >
                     {draft.description || "Chưa có mô tả."}
                   </Paragraph>
@@ -501,7 +515,9 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                 </Card>
 
                 {/* Modules & Lessons */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 14 }}
+                >
                   <div
                     style={{
                       fontWeight: 600,
@@ -565,7 +581,13 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                         </div>
                       )}
 
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
+                      >
                         {m.lessons?.map((les, lIdx) => (
                           <div
                             key={lIdx}
@@ -598,7 +620,9 @@ export function CourseAiStudio({ onSaved, onCancel }) {
                               ) : (
                                 <FileText size={14} color="#3b82f6" />
                               )}
-                              <span style={{ fontWeight: 500, color: "#374151" }}>
+                              <span
+                                style={{ fontWeight: 500, color: "#374151" }}
+                              >
                                 {les.title}
                               </span>
                             </div>
