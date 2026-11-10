@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button, Input, Modal, Select, Space, Table, Tag } from "antd";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Field, PageTitle } from "../components/common";
@@ -18,6 +18,8 @@ export function QuestionsPage({
   setGenerated,
   onDeleteQuestion,
 }) {
+  const [preview, setPreview] = useState(null);
+
   const filteredQuestions = questions.filter(
     (x) =>
       (!subject || x.question.subject === subject) &&
@@ -148,25 +150,7 @@ export function QuestionsPage({
             width: 170,
             render: (_, x) => (
               <Space>
-                <Button
-                  onClick={() =>
-                    Modal.info({
-                      title: x.question.content,
-                      content: (
-                        <div>
-                          {x.answers.map((a) => (
-                            <p key={a.id}>
-                              {a.correct ? "✓" : "○"} {a.content}
-                            </p>
-                          ))}
-                          <p>{x.question.explanation}</p>
-                        </div>
-                      ),
-                    })
-                  }
-                >
-                  Xem
-                </Button>
+                <Button onClick={() => setPreview(x)}>Xem</Button>
                 <Button
                   aria-label="Sửa câu hỏi"
                   icon={<Pencil size={14} />}
@@ -192,7 +176,69 @@ export function QuestionsPage({
           },
         ]}
       />
+      <Modal
+        open={!!preview}
+        onCancel={() => setPreview(null)}
+        footer={null}
+        width={560}
+        centered
+        className="question-preview-modal"
+      >
+        {preview && (
+          <QuestionPreview item={preview} onClose={() => setPreview(null)} />
+        )}
+      </Modal>
     </>
+  );
+}
+
+function QuestionPreview({ item, onClose }) {
+  const { question, answers } = item;
+  return (
+    <article className="question-preview">
+      <div className="question-preview-tags">
+        <Tag>{question.subject}</Tag>
+        <Tag
+          color={
+            { EASY: "green", MEDIUM: "gold", HARD: "red" }[
+              question.difficulty
+            ]
+          }
+        >
+          {
+            { EASY: "Dễ", MEDIUM: "Trung bình", HARD: "Khó" }[
+              question.difficulty
+            ]
+          }
+        </Tag>
+      </div>
+      <h3 className="question-preview-title">{question.content}</h3>
+      <ol className="question-preview-answers">
+        {answers.map((answer, index) => (
+          <li
+            key={answer.id ?? index}
+            className={answer.correct ? "is-correct" : undefined}
+          >
+            <span className="question-preview-letter">
+              {String.fromCharCode(65 + index)}
+            </span>
+            <span className="question-preview-text">{answer.content}</span>
+            {answer.correct && (
+              <span className="question-preview-badge">Đáp án đúng</span>
+            )}
+          </li>
+        ))}
+      </ol>
+      {!!question.explanation?.trim() && (
+        <section className="question-preview-explanation">
+          <h4>Giải thích</h4>
+          <p>{question.explanation}</p>
+        </section>
+      )}
+      <div className="question-preview-footer">
+        <Button onClick={onClose}>Đóng</Button>
+      </div>
+    </article>
   );
 }
 

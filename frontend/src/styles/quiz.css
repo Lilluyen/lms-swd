@@ -192,6 +192,127 @@
   font-size: 18px !important;
 }
 
+/* Question bank preview */
+
+.question-preview {
+  display: grid;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.question-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.question-preview-tags .ant-tag {
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+.question-preview-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.question-preview-answers {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.question-preview-answers li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 2px solid var(--ink);
+  background: var(--card);
+  padding: 10px 12px;
+}
+
+.question-preview-answers li.is-correct {
+  background: var(--acid);
+  box-shadow: var(--hard-sm);
+}
+
+.question-preview-letter {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.question-preview-answers li.is-correct .question-preview-letter {
+  background: var(--ink);
+  color: var(--acid);
+}
+
+.question-preview-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.question-preview-badge {
+  border: 2px solid var(--ink);
+  background: var(--card);
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.question-preview-explanation {
+  display: grid;
+  gap: 4px;
+  border-left: 4px solid var(--purple);
+  background: var(--paper-2);
+  padding: 10px 12px;
+}
+
+.question-preview-explanation h4 {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.question-preview-explanation p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.question-preview-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ============================================================
    Quizzes
    ============================================================ */

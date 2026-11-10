@@ -145,7 +145,10 @@ export function QuestionAiStudio({ initialSubject = "", onSaved, onCancel }) {
       content: "Các chỉnh sửa chưa lưu trong danh sách bản nháp sẽ bị thay thế.",
       okText: "Tạo lại",
       cancelText: "Tiếp tục duyệt",
-      onOk: runGenerate,
+      // Không trả promise để modal đóng ngay, phần tạo lại chạy tiếp phía sau.
+      onOk: () => {
+        runGenerate();
+      },
     });
   };
 
@@ -160,6 +163,9 @@ export function QuestionAiStudio({ initialSubject = "", onSaved, onCancel }) {
     setSelected((current) =>
       checked ? [...current, index] : current.filter((item) => item !== index),
     );
+
+  const selectAllDrafts = (checked) =>
+    setSelected(checked ? drafts.map((_, index) => index) : []);
 
   const saveSelected = async () => {
     if (!selected.length || saving) return;
@@ -246,6 +252,7 @@ export function QuestionAiStudio({ initialSubject = "", onSaved, onCancel }) {
           drafts={drafts}
           selected={selected}
           onSelect={selectDraft}
+          onSelectAll={selectAllDrafts}
           onUpdateDraft={updateDraft}
           onDiscardAll={discardAll}
           onLeave={leave}

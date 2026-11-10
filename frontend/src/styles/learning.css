@@ -439,7 +439,7 @@
 
 .payment-layout {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  /* grid-template-columns: 200px minmax(0, 1fr); */
   gap: 18px;
   margin: 0;
 }
@@ -486,7 +486,7 @@
 
 .payment-details > div {
   display: grid;
-  grid-template-columns: 135px minmax(0, 1fr) auto;
+  grid-template-columns: 135px minmax(0, 5fr) auto;
   align-items: center;
   gap: 8px;
   min-height: 42px;

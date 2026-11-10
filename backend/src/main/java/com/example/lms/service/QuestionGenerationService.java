@@ -18,6 +18,8 @@ public class QuestionGenerationService {
 
   private static final List<String> DIFFICULTIES = List.of("EASY", "MEDIUM", "HARD");
   private static final List<String> LANGUAGES = List.of("ENGLISH", "VIETNAMESE");
+  /** Gemini sometimes answers with an empty string; ask it again a few times. */
+  private static final int GENERATE_ATTEMPTS = 3;
   private final Integrations integrations;
   private final ContentAccessService content;
   private final ObjectMapper mapper = new ObjectMapper();
@@ -62,7 +64,7 @@ public class QuestionGenerationService {
     if (!errors.isEmpty()) throw new FieldErrors(errors);
 
     String prompt = prompt(subject, topic, difficulty, input.quantity(), language, instructions, reference);
-    String raw = integrations.generateText(prompt, Math.min(8192, 900 + input.quantity() * 520));
+    String raw = generateAnswer(prompt, Math.min(8192, 900 + input.quantity() * 520));
     try {
       String json = raw.trim().replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("(?s)```\\s*$", "");
       List<Map<String, Object>> drafts = mapper.readValue(json, new TypeReference<>() {});
@@ -75,6 +77,21 @@ public class QuestionGenerationService {
         HttpStatus.BAD_GATEWAY,
         "Gemini trả về bản nháp không hợp lệ hoặc không bám đủ nội dung bài học. Hãy bổ sung ngữ cảnh và tạo lại."
       );
+    }
+  }
+
+  /**
+   * Asks Gemini again only when it answers with an empty string. A non-empty
+   * answer that fails the grounding checks is never retried: the teacher has to
+   * add context instead.
+   */
+  private String generateAnswer(String prompt, int maxOutputTokens) {
+    for (int attempt = 1; ; attempt++) {
+      try {
+        return integrations.generateText(prompt, maxOutputTokens);
+      } catch (Integrations.EmptyAnswerException e) {
+        if (attempt >= GENERATE_ATTEMPTS) throw e;
+      }
     }
   }
 

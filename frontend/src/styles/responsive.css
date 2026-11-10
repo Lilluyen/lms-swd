@@ -203,6 +203,11 @@
   box-shadow: 4px 4px 0 var(--purple);
 }
 
+.draft-list-tools {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .draft-card-head {
   display: flex;
   justify-content: space-between;

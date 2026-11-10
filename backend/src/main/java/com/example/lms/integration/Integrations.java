@@ -107,6 +107,17 @@ public class Integrations {
     }
   }
 
+  /** Gemini answered with an empty string; only this case is worth retrying. */
+  public static class EmptyAnswerException extends ResponseStatusException {
+
+    public EmptyAnswerException() {
+      super(
+        HttpStatus.BAD_GATEWAY,
+        "Gemini trả về nội dung rỗng. Vui lòng thử tạo lại."
+      );
+    }
+  }
+
   /**
    * Sends a ready-made prompt to Gemini and returns the plain text answer.
    * Every failure mode is mapped to a status the UI can explain.
@@ -118,9 +129,7 @@ public class Integrations {
     );
     try {
       String text = GeminiApi.extractText(api.post(prompt, maxOutputTokens));
-      if (text == null || text.isBlank()) throw new IllegalStateException(
-        "empty"
-      );
+      if (text == null || text.isBlank()) throw new EmptyAnswerException();
       return text;
     } catch (ResponseStatusException e) {
       throw e;

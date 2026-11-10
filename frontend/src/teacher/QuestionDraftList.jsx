@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Input, Tag } from "antd";
+import { Button, Checkbox, Input, Tag } from "antd";
 import { Save, Sparkles } from "lucide-react";
 import { Field } from "./shared";
 
@@ -8,13 +8,13 @@ export function QuestionDraftList({
   drafts,
   selected,
   onSelect,
+  onSelectAll,
   onUpdateDraft,
   onDiscardAll,
   onLeave,
   onSave,
   saving,
 }) {
-  console.log(drafts);
   return (
     <section className="question-ai-results" aria-labelledby="draft-title">
       <div className="results-head">
@@ -30,9 +30,20 @@ export function QuestionDraftList({
           </div>
         </div>
         {!!drafts.length && (
-          <Button danger type="text" onClick={onDiscardAll}>
-            Bỏ tất cả
-          </Button>
+          <div className="draft-list-tools">
+            <Checkbox
+              checked={selected.length === drafts.length}
+              indeterminate={
+                selected.length > 0 && selected.length < drafts.length
+              }
+              onChange={(e) => onSelectAll(e.target.checked)}
+            >
+              Chọn tất cả
+            </Checkbox>
+            <Button danger type="text" onClick={onDiscardAll}>
+              Bỏ tất cả
+            </Button>
+          </div>
         )}
       </div>
       {!drafts.length ? (
