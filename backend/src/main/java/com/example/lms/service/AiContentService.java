@@ -150,7 +150,7 @@ public class AiContentService {
   }
 
   /**
-   * Conversational AI Course Copilot: discusses requirements with the teacher
+   * Conversational AI Course : discusses requirements with the teacher
    * and proposes/updates a full course syllabus draft.
    */
   public CourseChatResponse chatCourse(CourseChatRequest request, User teacher) {
