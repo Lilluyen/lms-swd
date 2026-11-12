@@ -1,26 +1,31 @@
 package com.example.lms.integration;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Low-level Gemini transport (the "GeminiApi" of the class diagrams).
- * Knows the endpoint, the API key and the response shape; business prompts and
- * validation stay in the feature services / {@link Integrations}.
+ * Optimized for low latency: HTTP/2 multiplexing, thinkingBudget=0 for instant streaming,
+ * dynamic model promotion, and concise generation configs.
  */
 @Service
 public class GeminiApi {
 
   private final String key;
-  /** Primary model first, then every configured fallback, without duplicates. */
+  /** Primary model first, then every configured fallback; working model promoted dynamically. */
   private final List<String> models;
   private final String baseUrl;
   private final RestClient client;
@@ -32,22 +37,24 @@ public class GeminiApi {
     @Value(
       "${app.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}"
     ) String baseUrl,
-    @Value("${app.gemini.timeout-seconds:45}") long timeoutSeconds
+    @Value("${app.gemini.timeout-seconds:35}") long timeoutSeconds
   ) {
     this.key = key == null ? "" : key;
-    this.models = resolveModels(model, fallbackModels);
+    this.models = Collections.synchronizedList(new ArrayList<>(resolveModels(model, fallbackModels)));
     this.baseUrl = baseUrl.endsWith("/")
       ? baseUrl.substring(0, baseUrl.length() - 1)
       : baseUrl;
+
+    HttpClient httpClient = HttpClient.newBuilder()
+      .version(HttpClient.Version.HTTP_2)
+      .connectTimeout(Duration.ofSeconds(6))
+      .build();
+
     this.client = RestClient.builder()
       .requestFactory(
-        new org.springframework.http.client.JdkClientHttpRequestFactory(
-          java.net.http.HttpClient.newBuilder()
-            .connectTimeout(java.time.Duration.ofSeconds(10))
-            .build()
-        ) {
+        new JdkClientHttpRequestFactory(httpClient) {
           {
-            setReadTimeout(java.time.Duration.ofSeconds(timeoutSeconds));
+            setReadTimeout(Duration.ofSeconds(timeoutSeconds));
           }
         }
       )
@@ -60,18 +67,28 @@ public class GeminiApi {
 
   /**
    * Sends one user prompt and returns the decoded JSON response. Models are
-   * tried in order: the primary first, then each configured fallback. An empty
-   * answer or a model-level failure (unknown model, rate limit, server error)
-   * moves on to the next model, while auth and bad-request errors fail fast
-   * because another model would fail the same way.
+   * tried in order. Once a candidate succeeds, it is promoted to index 0 so future
+   * calls skip any non-working or slower models.
    */
   public Map<?, ?> post(String prompt, int maxOutputTokens) {
     RuntimeException lastFailure = null;
     Map<?, ?> lastEmpty = null;
-    for (String candidate : models) {
+
+    List<String> currentCandidates;
+    synchronized (models) {
+      currentCandidates = new ArrayList<>(models);
+    }
+
+    for (int i = 0; i < currentCandidates.size(); i++) {
+      String candidate = currentCandidates.get(i);
       try {
         Map<?, ?> raw = send(candidate, prompt, maxOutputTokens);
-        if (hasText(raw)) return raw;
+        if (hasText(raw)) {
+          if (i > 0) {
+            promoteModel(candidate);
+          }
+          return raw;
+        }
         lastEmpty = raw;
         lastFailure = null;
       } catch (RestClientResponseException e) {
@@ -83,7 +100,37 @@ public class GeminiApi {
     return lastEmpty;
   }
 
+  private synchronized void promoteModel(String candidate) {
+    synchronized (models) {
+      if (models.remove(candidate)) {
+        models.add(0, candidate);
+      }
+    }
+  }
+
   private Map<?, ?> send(String candidate, String prompt, int maxOutputTokens) {
+    Map<String, Object> genConfig = new LinkedHashMap<>();
+    genConfig.put("temperature", 0.3);
+    genConfig.put("maxOutputTokens", maxOutputTokens);
+
+    // Disable internal thinking overhead on Flash / 2.0+ models to eliminate 5-15s thinking delay
+    if (candidate.contains("flash") || candidate.contains("2.5") || candidate.contains("2.0") || candidate.contains("3.")) {
+      genConfig.put("thinkingConfig", Map.of("thinkingBudget", 0));
+    }
+
+    try {
+      return executeSend(candidate, prompt, genConfig);
+    } catch (RestClientResponseException e) {
+      // If the model rejects thinkingConfig with 400 Bad Request, seamlessly retry without it
+      if (e.getStatusCode().value() == 400 && genConfig.containsKey("thinkingConfig")) {
+        genConfig.remove("thinkingConfig");
+        return executeSend(candidate, prompt, genConfig);
+      }
+      throw e;
+    }
+  }
+
+  private Map<?, ?> executeSend(String candidate, String prompt, Map<String, Object> genConfig) {
     return client
       .post()
       .uri(baseUrl + "/models/" + candidate + ":generateContent")
@@ -101,7 +148,7 @@ public class GeminiApi {
             )
           ),
           "generationConfig",
-          Map.of("temperature", 0.7, "maxOutputTokens", maxOutputTokens)
+          genConfig
         )
       )
       .retrieve()

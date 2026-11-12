@@ -10,6 +10,7 @@ import com.example.lms.web.FieldErrors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -362,7 +363,8 @@ public class AiContentService {
     sb.append("}\n");
     sb.append("```\n");
 
-    String raw = integrations.generateText(sb.toString(), 4000);
+    int dynamicTokens = Math.min(3500, Math.max(1200, moduleCount * lessonsPerModule * 100));
+    String raw = integrations.generateText(sb.toString(), dynamicTokens);
     List<CourseDraft.ModuleDraft> modules = parseModulesJson(raw);
     if (modules == null || modules.isEmpty()) {
       throw new FieldErrors("topic", "AI không thể tạo cấu trúc module hợp lệ. Vui lòng thử lại với chủ đề chi tiết hơn.");
@@ -435,6 +437,15 @@ public class AiContentService {
     Module module = content.ownedModule(request.moduleId(), teacher);
     Course course = module.course;
 
+    List<Map<String, Object>> existingLessons = lessonContent.lessonViews(module.id);
+    int existingCount = (existingLessons != null) ? existingLessons.size() : 0;
+
+    boolean isReplace = request.replaceExisting() != null
+      ? request.replaceExisting()
+      : (existingCount > 0);
+
+    int startIndex = (isReplace || existingCount == 0) ? 1 : existingCount + 1;
+
     String topic = trim(request.topic());
     if (topic.isBlank()) topic = trim(module.title);
     if (topic.length() < 3) topic = module.title;
@@ -442,9 +453,12 @@ public class AiContentService {
     String context = trim(request.context());
     if (context.isBlank() && course.context != null) context = trim(course.context);
 
+    int defaultCount = (isReplace && existingCount > 0)
+      ? Math.min(10, Math.max(1, existingCount))
+      : 4;
     int count = request.lessonCount() != null && request.lessonCount() >= 1 && request.lessonCount() <= 10
       ? request.lessonCount()
-      : 4;
+      : defaultCount;
     String language = request.language() != null && !request.language().isBlank() ? request.language().trim() : "Vietnamese";
 
     StringBuilder sb = new StringBuilder();
@@ -464,6 +478,38 @@ public class AiContentService {
     }
     sb.append("- Specific Topic / Emphasis: ").append(topic).append("\n");
     sb.append("- Language: ").append(language).append("\n\n");
+
+    if (existingCount > 0) {
+      if (isReplace) {
+        sb.append("KHUNG BÀI HỌC CÓ SẴN TRONG MODULE NÀY (Được tạo từ khung khóa học / Course Curriculum):\n");
+        for (int i = 0; i < existingLessons.size(); i++) {
+          Map<String, Object> el = existingLessons.get(i);
+          sb.append(i + 1).append(". Tiêu đề: \"").append(el.get("title")).append("\"");
+          Object ec = el.get("content");
+          if (ec != null && !ec.toString().isBlank() && ec.toString().trim().length() > 5) {
+            String brief = ec.toString().trim();
+            if (brief.length() > 250) brief = brief.substring(0, 250) + "...";
+            sb.append(" - Định hướng/Tóm tắt: ").append(brief);
+          }
+          sb.append("\n");
+        }
+        sb.append("\nCHỈ DẪN QUAN TRỌNG - PHÁT TRIỂN NỘI DUNG CHI TIẾT & THAY THẾ:\n");
+        sb.append("1. Khung khóa học đã định sẵn các bài học ở trên. Bạn hãy dựa trên đúng các bài học này để viết nội dung chi tiết, hoàn chỉnh cho từng bài.\n");
+        sb.append("2. 'content': Mỗi bài học cần có nội dung chi tiết dạng Markdown (gồm mục tiêu, kiến thức cốt lõi, ví dụ minh họa thực tế/code/bài tập, tóm tắt ghi nhớ), độ dài phong phú (khoảng 200 - 1000 từ).\n");
+        sb.append("3. Đánh số tiêu đề chuẩn bắt đầu từ Bài 1 đến Bài ").append(count).append(" (Ví dụ: 'Bài 1: ...', 'Bài 2: ...').\n\n");
+      } else {
+        sb.append("CÁC BÀI HỌC ĐÃ CÓ TRONG MODULE NÀY (ĐÃ CÓ ").append(existingCount).append(" BÀI TỪ BÀI 1 ĐẾN BÀI ").append(existingCount).append("):\n");
+        for (int i = 0; i < existingLessons.size(); i++) {
+          Map<String, Object> el = existingLessons.get(i);
+          sb.append(i + 1).append(". Tiêu đề: \"").append(el.get("title")).append("\"\n");
+        }
+        sb.append("\nCHỈ DẪN BẮT BUỘC - ĐÁNH SỐ TIẾP NỐI CHO CÁC BÀI HỌC MỚI:\n");
+        sb.append("1. Module này ĐÃ CÓ ").append(existingCount).append(" bài học. Bạn đang tạo THÊM ").append(count).append(" bài học TIẾP THEO vào cuối module.\n");
+        sb.append("2. Tiêu đề của các bài học mới BẮT BUỘC PHẢI ĐÁNH SỐ TIẾP NỐI từ Bài ").append(startIndex).append(" đến Bài ").append(startIndex + count - 1).append(" (Ví dụ: 'Bài ").append(startIndex).append(": ...', 'Bài ").append(startIndex + 1).append(": ...'). TUYỆT ĐỐI KHÔNG đánh số lại từ Bài 1!\n");
+        sb.append("3. Nội dung các bài học mới phải tiếp nối kiến thức nâng cao hơn so với các bài học đã có.\n\n");
+      }
+    }
+
     sb.append("RULES:\n");
     sb.append("1. Each lesson must have a distinct, practical topic progressing systematically.\n");
     sb.append("2. 'title': 3-100 characters.\n");
@@ -484,11 +530,31 @@ public class AiContentService {
     sb.append("}\n");
     sb.append("```\n");
 
-    String raw = integrations.generateText(sb.toString(), 3500);
-    List<CourseDraft.LessonDraft> lessons = parseLessonsJson(raw);
-    if (lessons == null || lessons.isEmpty()) {
+    int dynamicTokens = Math.min(3200, Math.max(900, count * 550));
+    String raw = integrations.generateText(sb.toString(), dynamicTokens);
+    List<CourseDraft.LessonDraft> rawLessons = parseLessonsJson(raw);
+    if (rawLessons == null || rawLessons.isEmpty()) {
       throw new FieldErrors("topic", "AI không thể tạo danh sách bài học. Vui lòng thử lại với yêu cầu chi tiết hơn.");
     }
+
+    List<CourseDraft.LessonDraft> lessons = new ArrayList<>();
+    for (int i = 0; i < rawLessons.size(); i++) {
+      CourseDraft.LessonDraft ld = rawLessons.get(i);
+      int targetNum = startIndex + i;
+      String t = ld.title() != null ? ld.title().trim() : "";
+      if (t.matches("^(?i)bài\\s*\\d+\\s*[:.-]?\\s*.*")) {
+        t = t.replaceFirst("^(?i)bài\\s*\\d+\\s*[:.-]?\\s*", "Bài " + targetNum + ": ");
+      } else if (!t.toLowerCase().startsWith("bài ")) {
+        t = "Bài " + targetNum + ": " + t;
+      }
+      lessons.add(new CourseDraft.LessonDraft(
+        t,
+        ld.contentType(),
+        ld.content(),
+        ld.durationMinutes()
+      ));
+    }
+
     return new LessonBatchAiResponse(module.title, lessons);
   }
 
@@ -497,6 +563,12 @@ public class AiContentService {
     if (request == null || request.lessons() == null || request.lessons().isEmpty()) {
       throw new FieldErrors("lessons", "Danh sách bài học cần thêm không được để trống");
     }
+
+    boolean replace = Boolean.TRUE.equals(request.replaceExisting());
+    if (replace) {
+      lessonContent.deleteLessonsOfModule(module.id);
+    }
+
     int added = 0;
     for (CourseDraft.LessonDraft lDraft : request.lessons()) {
       if (lDraft.title() == null || lDraft.title().trim().isBlank()) continue;
@@ -531,6 +603,7 @@ public class AiContentService {
     out.put("lessons", lessonContent.lessonViews(module.id));
     out.put("modules", moduleContent.moduleList(module.course));
     out.put("addedLessons", added);
+    out.put("replacedExisting", replace);
     return out;
   }
 

@@ -343,7 +343,10 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
           onEditLesson={onEditLesson}
           onAddLesson={onAddLesson}
           onRemoveLesson={removeLesson}
-          onAiBatchLessons={(m) => setBatchLessonModule(m)}
+          onAiBatchLessons={(m) => {
+            if (!lessons[m.id]) loadLessons(m.id);
+            setBatchLessonModule(m);
+          }}
           onOpenCurriculumAi={() => setCurriculumAiOpen(true)}
         />
       </div>
@@ -395,6 +398,7 @@ export function ModuleBoard({ courseId, onBack, onEditLesson, onAddLesson }) {
       <LessonBatchAiModal
         open={Boolean(batchLessonModule)}
         module={batchLessonModule}
+        existingLessons={batchLessonModule ? (lessons[batchLessonModule.id] || []) : []}
         course={course}
         onApplied={(res, mId) => {
           setLessons((prev) => ({ ...prev, [mId]: res.lessons }));

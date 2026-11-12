@@ -6,5 +6,6 @@ public record LessonBatchAiRequest(
   String topic,
   String context,
   Integer lessonCount,
-  String language
+  String language,
+  Boolean replaceExisting
 ) {}

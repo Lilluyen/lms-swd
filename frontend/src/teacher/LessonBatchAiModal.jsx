@@ -1,9 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Button, Checkbox, Empty, Input, InputNumber, Modal, Select, Spin, Tag, message } from "antd";
+import { Alert, Button, Checkbox, Empty, Input, InputNumber, Modal, Radio, Select, Spin, Tag, message } from "antd";
 import { BookOpen, Check, Layers, RotateCcw, Sparkles, Trash2 } from "lucide-react";
-import { post } from "../api";
+import { api, post } from "../api";
 
-export function LessonBatchAiModal({ open, module, course, onApplied, onClose }) {
+function renumberLessonTitles(items, startNumber) {
+  return items.map((l, idx) => {
+    const num = startNumber + idx;
+    let title = l.title || "";
+    if (/^bài\s*\d+\s*[:.-]?\s*/i.test(title)) {
+      title = title.replace(/^bài\s*\d+\s*[:.-]?\s*/i, `Bài ${num}: `);
+    } else if (!title.toLowerCase().startsWith("bài ")) {
+      title = `Bài ${num}: ${title}`;
+    }
+    return { ...l, title };
+  });
+}
+
+export function LessonBatchAiModal({ open, module, course, existingLessons = [], onApplied, onClose }) {
   const [topic, setTopic] = useState("");
   const [context, setContext] = useState("");
   const [lessonCount, setLessonCount] = useState(4);
@@ -12,18 +25,41 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState("");
   const [lessons, setLessons] = useState([]);
+  const [existingList, setExistingList] = useState([]);
+  const [replaceExisting, setReplaceExisting] = useState(true);
 
   useEffect(() => {
     if (!open || !module) return;
     setTopic(module.title || "");
     setContext(course?.context || "");
-    setLessonCount(4);
-    setLanguage("Vietnamese");
     setError("");
     setLessons([]);
     setLoading(false);
     setApplying(false);
-  }, [open, module, course]);
+
+    const initList = async () => {
+      let cur = existingLessons || [];
+      if ((!cur || !cur.length) && module.id) {
+        try {
+          const res = await api(`/teacher/modules/${module.id}/lessons`);
+          cur = res.lessons || [];
+        } catch (_) {}
+      }
+      setExistingList(cur);
+      const count = cur.length > 0 ? Math.min(10, Math.max(2, cur.length)) : 4;
+      setLessonCount(count);
+      setReplaceExisting(cur.length > 0);
+    };
+    initList();
+  }, [open, module, course, existingLessons]);
+
+  const handleModeChange = (newReplace) => {
+    setReplaceExisting(newReplace);
+    if (lessons.length > 0) {
+      const startNum = (!newReplace && existingList.length > 0) ? existingList.length + 1 : 1;
+      setLessons((prev) => renumberLessonTitles(prev, startNum));
+    }
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
@@ -33,6 +69,7 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
     setError("");
     setLoading(true);
     try {
+      const isReplacing = replaceExisting && existingList.length > 0;
       const res = await post("/teacher/ai/generate-lessons", {
         courseId: course?.id,
         moduleId: module.id,
@@ -40,11 +77,16 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
         context: context.trim(),
         lessonCount,
         language,
+        replaceExisting: isReplacing,
       });
-      const items = (res.lessons || []).map((l) => ({
+
+      const startNumber = (!isReplacing && existingList.length > 0) ? existingList.length + 1 : 1;
+      const rawItems = (res.lessons || []).map((l) => ({
         ...l,
         selected: true,
       }));
+      const items = renumberLessonTitles(rawItems, startNumber);
+
       setLessons(items);
       if (!items.length) {
         setError("AI không trả về bài học nào, vui lòng thử lại.");
@@ -61,16 +103,22 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
   const handleApply = async () => {
     const selectedLessons = lessons.filter((l) => l.selected);
     if (!selectedLessons.length) {
-      setError("Vui lòng tích chọn ít nhất 1 bài học để thêm vào module.");
+      setError("Vui lòng tích chọn ít nhất 1 bài học để đưa vào module.");
       return;
     }
     setApplying(true);
     setError("");
     try {
+      const isReplacing = replaceExisting && existingList.length > 0;
       const res = await post(`/teacher/modules/${module.id}/apply-lessons`, {
         lessons: selectedLessons,
+        replaceExisting: isReplacing,
       });
-      message.success(`Đã thêm thành công ${res.addedLessons} bài học vào module "${module.title}"!`);
+      if (isReplacing) {
+        message.success(`Đã thay thế và cập nhật thành công ${res.addedLessons} bài học vào module "${module.title}"!`);
+      } else {
+        message.success(`Đã thêm thành công ${res.addedLessons} bài học tiếp theo vào module "${module.title}"!`);
+      }
       if (onApplied) onApplied(res, module.id);
       onClose();
     } catch (err) {
@@ -97,10 +145,15 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
   };
 
   const removeLesson = (idx) => {
-    setLessons((prev) => prev.filter((_, i) => i !== idx));
+    setLessons((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      const startNum = (!replaceExisting && existingList.length > 0) ? existingList.length + 1 : 1;
+      return renumberLessonTitles(next, startNum);
+    });
   };
 
   const selectedCount = lessons.filter((l) => l.selected).length;
+  const startNumber = (!replaceExisting && existingList.length > 0) ? existingList.length + 1 : 1;
 
   return (
     <Modal
@@ -144,13 +197,18 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
           <Button
             key="apply"
             type="primary"
-            icon={<Check size={16} />}
+            icon={replaceExisting && existingList.length > 0 ? <Layers size={16} /> : <Check size={16} />}
             loading={applying}
             disabled={selectedCount === 0}
             onClick={handleApply}
-            style={{ background: "#10b981", borderColor: "#10b981" }}
+            style={{
+              background: replaceExisting && existingList.length > 0 ? "#4f46e5" : "#10b981",
+              borderColor: replaceExisting && existingList.length > 0 ? "#4f46e5" : "#10b981",
+            }}
           >
-            Thêm vào module ({selectedCount} bài học)
+            {replaceExisting && existingList.length > 0
+              ? `Thay thế bài cũ (${selectedCount} bài học)`
+              : `Thêm vào module từ Bài ${startNumber} (${selectedCount} bài học)`}
           </Button>
         ),
       ]}
@@ -168,7 +226,7 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
 
       <div
         style={{
-          marginBottom: 14,
+          marginBottom: 12,
           padding: "10px 14px",
           background: "var(--paper-2)",
           border: "2px solid var(--ink)",
@@ -186,6 +244,49 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
           </p>
         )}
       </div>
+
+      {existingList.length > 0 && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "10px 14px",
+            background: "rgba(99, 102, 241, 0.06)",
+            border: "1.5px solid #818cf8",
+            borderRadius: 6,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, color: "#4338ca", fontSize: 13 }}>
+              <Layers size={16} />
+              Module đã có sẵn {existingList.length} bài học (từ khung khóa học):
+            </div>
+            <Radio.Group
+              size="small"
+              value={replaceExisting}
+              onChange={(e) => handleModeChange(e.target.value)}
+            >
+              <Radio.Button value={true} style={{ fontWeight: 600 }}>
+                🔄 Thay thế bài cũ (1 - {existingList.length})
+              </Radio.Button>
+              <Radio.Button value={false}>
+                ➕ Thêm tiếp (từ Bài {existingList.length + 1})
+              </Radio.Button>
+            </Radio.Group>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {existingList.map((el, i) => (
+              <Tag key={el.id || i} color="geekblue" style={{ fontSize: 11.5, padding: "2px 8px" }}>
+                #{i + 1} {el.title}
+              </Tag>
+            ))}
+          </div>
+          <p className="muted" style={{ margin: "6px 0 0", fontSize: 11.5 }}>
+            {replaceExisting
+              ? "💡 Chế độ THAY THẾ: AI sẽ dựa trên khung bài học trên để sinh nội dung chi tiết và ghi đè bài cũ (bắt đầu từ Bài 1)."
+              : `💡 Chế độ THÊM TIẾP: Giữ nguyên ${existingList.length} bài cũ, các bài học mới sinh sẽ được đánh số tiếp nối tự động từ Bài ${existingList.length + 1}.`}
+          </p>
+        </div>
+      )}
 
       {lessons.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -205,11 +306,11 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ display: "block", fontWeight: 700, marginBottom: 4 }}>
-                Số lượng bài học muốn tạo
+                Số lượng bài học muốn {replaceExisting ? "tạo" : "thêm tiếp"}
               </label>
               <InputNumber
-                min={2}
-                max={8}
+                min={1}
+                max={10}
                 value={lessonCount}
                 onChange={(v) => setLessonCount(v || 4)}
                 style={{ width: "100%" }}
@@ -250,7 +351,7 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
             <div style={{ padding: "28px 0", textAlign: "center" }}>
               <Spin tip="AI đang phân tích kiến thức và thiết kế chuỗi bài học..." size="large" />
               <p className="muted" style={{ marginTop: 12 }}>
-                Đang xây dựng {lessonCount} bài học có hệ thống cho module...
+                Đang xây dựng {lessonCount} bài học {replaceExisting ? "" : `(tiếp nối từ Bài ${startNumber})`} cho module...
               </p>
             </div>
           )}
@@ -276,7 +377,9 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
               Chọn tất cả ({selectedCount}/{lessons.length} bài)
             </Checkbox>
             <span className="muted" style={{ fontSize: 12 }}>
-              Tích chọn bài học bạn muốn thêm vào module.
+              {replaceExisting && existingList.length > 0
+                ? "Các bài học được chọn sẽ thay thế bài học cũ trong module."
+                : `Các bài học sẽ được thêm tiếp từ Bài #${startNumber} vào module.`}
             </span>
           </div>
 
@@ -300,10 +403,10 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
                       fontWeight: 700,
                       fontSize: 12,
                       color: "var(--ink-3)",
-                      minWidth: 20,
+                      minWidth: 26,
                     }}
                   >
-                    #{idx + 1}
+                    #{startNumber + idx}
                   </span>
                   <Input
                     value={l.title}
@@ -341,7 +444,7 @@ export function LessonBatchAiModal({ open, module, course, onApplied, onClose })
                       lineHeight: 1.5,
                       color: "var(--ink-2)",
                       whiteSpace: "pre-wrap",
-                      maxHeight: "80px",
+                      maxHeight: "100px",
                       overflowY: "auto",
                     }}
                   >

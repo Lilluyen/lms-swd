@@ -160,7 +160,8 @@ public class Integrations {
         " bằng tiếng Việt về: " +
         topic +
         ". Trả về văn bản thuần, không HTML.";
-      String text = GeminiApi.extractText(api.post(prompt, 8192));
+      int tokens = "course".equals(kind) ? 1200 : 3500;
+      String text = GeminiApi.extractText(api.post(prompt, tokens));
       if (text == null || text.isBlank()) throw new IllegalStateException();
       return text;
     } catch (Exception e) {
