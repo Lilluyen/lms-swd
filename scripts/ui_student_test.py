@@ -359,16 +359,23 @@ cdp.wait_for(
     label="submission notice",
 )
 cdp.wait_for(
-    "document.body.innerText.toLowerCase().includes('kết quả luyện tập')",
-    label="results screen after submit",
+    "!!document.querySelector('.review-summary h2')",
+    label="answer review after submit",
 )
-assert cdp.js(
-    "!!document.querySelector('.list-row strong')"
-), "score missing on the results screen"
-score = cdp.js("document.querySelector('.list-row strong').innerText")
+score = cdp.js("document.querySelector('.review-summary h2').innerText")
+assert "1/1" in score, score
 print("ok  quiz submission records the score:", score)
 
-# --- review answers --------------------------------------------------------
+# --- results history and answer review -------------------------------------
+assert cdp.js(
+    "document.body.innerText.toLowerCase().includes('đáp án a là đúng')"
+), "review after submit is missing the explanation"
+cdp.js(
+    """[...document.querySelectorAll('.sidebar nav button')]
+        .find(b => b.textContent.trim() === 'Kết quả').click()"""
+)
+cdp.wait_for("!!document.querySelector('.list-row strong')", label="saved result in history")
+assert cdp.js("document.querySelector('.list-row strong').innerText") == "1/1"
 cdp.js(
     """[...document.querySelectorAll('.list-row button')]
         .find(b => b.textContent.includes('Xem đáp án')).click()"""

@@ -128,7 +128,7 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
     setErrors((e) => ({ ...e, fileUrl: undefined }));
     if (file.size > 25 * 1024 * 1024) {
       setErrors((e) => ({ ...e, fileUrl: "Tệp bài học tối đa 25 MB" }));
-      return;
+      return false;
     }
     setUploading(true);
     try {
@@ -146,6 +146,7 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
     } finally {
       setUploading(false);
     }
+    return false;
   };
 
   const remove = () =>
@@ -214,9 +215,11 @@ export function LessonEditor({ courseId, moduleId, lessonId, onDone, onCancel })
 
         <LessonBodyFields
           form={form}
-          set={set}
+          onChange={set}
           errors={errors}
+          saving={saving}
           uploading={uploading}
+          hasExistingFile={!!lessonId && !!form.fileUrl}
           onPickFile={pickFile}
           onOpenAi={() => setAiOpen(true)}
         />

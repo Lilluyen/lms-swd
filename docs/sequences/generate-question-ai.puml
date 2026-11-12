@@ -1,0 +1,428 @@
+' Design-level sequence diagrams, source-aligned on 2026-11-13.
+' Messages marked [render], [UI], [inline], [HTTP] describe interactions,
+' not new application methods. See the companion Markdown for error guards.
+
+@startuml question_ai_01_open
+title Generate Question with AI - Open studio
+autonumber
+hide footbox
+actor Teacher
+boundary "questionBankUI:QuestionsPage" as BankUI
+boundary "app:App" as App
+boundary "generatePage:GenerateQuestionPage" as Page
+boundary "questionAIUI:QuestionAiStudio" as UI
+boundary "criteria:QuestionCriteriaPanel" as Criteria
+boundary "draftList:QuestionDraftList" as DraftList
+participant "apiClient:api.js" as Client
+control "teacherController:TeacherController" as TC
+control "courseContent:CourseContentService" as CC
+participant "courseRepository:CourseRepository" as CR <<repository>>
+
+Teacher -> BankUI: [UI] Click "Tao bang AI"
+BankUI -> App: setForm(...), setGenerated([]), setPage("generate")
+App -> Page: [render] GenerateQuestionPage(...)
+Page -> UI: [render] initialSubject, onSaved, onCancel
+UI -> Criteria: [render] form, errors, callbacks
+UI -> DraftList: [render] drafts=[], selected=[]
+UI -> Client: api("/teacher/courses?page=0&size=50&status=ALL")
+Client -> TC: [HTTP GET] list(null, "ALL", 0, 50, session)
+note right of TC
+  TeacherController.teacher(session) reads uid,
+  uses UserRepository.findById(uid), checks role.
+  This controller does not use CurrentUserService.
+end note
+TC -> CC: search(teacher, null, "ALL", 0, 50)
+CC -> CR: findAll(specification, pageable)
+CR --> CC: Page<Course>
+note right of CC: Additional summary/count queries omitted.
+CC --> TC: {items, page, size, total, totalPages}
+TC --> Client: HTTP 200 coursePage
+Client --> UI: coursePage
+UI -> UI: setCourses(coursePage.items)
+UI -> Criteria: [render] course options
+Teacher -> Criteria: [UI] Enter criteria and context
+Criteria -> UI: set(key, value)
+@enduml
+
+@startuml question_ai_02_auth
+title AUTH-TEACHER - Reusable authentication fragment
+autonumber
+hide footbox
+control "questionController:QuestionController" as C
+control "currentUser:CurrentUserService" as Auth
+participant "session:HttpSession" as Session
+participant "userRepository:UserRepository" as UR <<repository>>
+
+C -> C: teacher(session)
+note right of C: Method inherited from BaseController.
+C -> Auth: requireTeacher(session)
+Auth -> Auth: requireRole(session, "TEACHER")
+Auth -> Auth: require(session)
+Auth -> Session: getAttribute("uid")
+Session --> Auth: uid
+alt uid is null
+  Auth --> C: throws ResponseStatusException(401)
+else uid exists
+  Auth -> UR: findById(uid)
+  UR --> Auth: Optional<User>
+  alt user missing
+    Auth --> C: throws ResponseStatusException(401)
+  else user.role != TEACHER
+    Auth --> C: throws ResponseStatusException(403)
+  else user is Teacher
+    Auth --> C: teacher:User
+  end
+end
+@enduml
+
+@startuml question_ai_03_context
+title Generate Question with AI - Optional lesson context
+autonumber
+hide footbox
+actor Teacher
+boundary "questionAIUI:QuestionAiStudio" as UI
+participant "apiClient:api.js" as Client
+control "teacherController:TeacherController" as TC
+control "access:ContentAccessService" as Access
+control "moduleContent:ModuleContentService" as MC
+control "lessonContent:LessonContentService" as LC
+participant "courseRepository:CourseRepository" as CR <<repository>>
+participant "moduleRepository:ModuleRepository" as MR <<repository>>
+participant "lessonRepository:LessonRepository" as LR <<repository>>
+
+note over UI,TC
+  Course list was loaded when the studio mounted.
+  TeacherController checks session/role for each request.
+  Child component callbacks are handled by QuestionAiStudio.
+end note
+opt Teacher selects an existing lesson instead of pasting context
+  Teacher -> UI: chooseCourse(courseId)
+  UI -> Client: api("/teacher/courses/{courseId}/modules")
+  Client -> TC: [HTTP GET] modules(courseId, session)
+  TC -> Access: ownedCourse(courseId, teacher)
+  Access -> CR: findById(courseId)
+  CR --> Access: course
+  Access -> Access: [inline] Check course.teacher.id
+  Access --> TC: course
+  TC -> MC: moduleList(course)
+  MC -> MR: findByCourseIdOrderByPosition(course.id)
+  MR --> MC: modules
+  MC --> TC: moduleViews
+  note right of TC: CourseContentService.summary(course) also contributes to response.
+  TC --> Client: HTTP 200 {course, modules}
+  Client --> UI: {course, modules}
+  UI -> UI: setModules(modules)
+
+  Teacher -> UI: chooseModule(moduleId)
+  UI -> Client: api("/teacher/modules/{moduleId}/lessons")
+  Client -> TC: [HTTP GET] lessons(moduleId, session)
+  TC -> Access: ownedModule(moduleId, teacher)
+  Access -> MR: findById(moduleId)
+  MR --> Access: module
+  Access -> Access: ownedCourse(module.course.id, teacher)
+  Access -> CR: findById(module.course.id)
+  CR --> Access: course
+  Access -> Access: [inline] Check course.teacher.id
+  Access --> TC: module
+  note right of TC: ModuleContentService.moduleList(...) also supplies module view.
+  TC -> LC: lessonViews(moduleId)
+  LC -> LR: findByModuleIdOrderByPosition(moduleId)
+  LR --> LC: lessons
+  LC --> TC: lessonViews
+  TC --> Client: HTTP 200 {module, lessons}
+  Client --> UI: {module, lessons}
+  UI -> UI: setLessons(lessons)
+
+  Teacher -> UI: set("lessonId", lessonId)
+  Teacher -> UI: useLesson()
+  alt selected lesson.contentType != TEXT
+    UI --> Teacher: [UI] Ask for pasted transcript/document text
+  else TEXT lesson
+    opt context editor already has text
+      UI --> Teacher: [UI] Confirm replacing context
+      Teacher -> UI: [UI] Agree to replace
+    end
+    UI -> UI: set("context", lesson.content)
+    UI -> UI: set("topic", lesson.title) if topic is empty
+    UI --> Teacher: [UI] Render editable context
+  end
+end
+note over UI,TC: useLesson() reads FE state; it does not issue another HTTP request.
+@enduml
+
+@startuml question_ai_04_generate
+title Generate Question with AI - Controller calls proxy directly
+autonumber
+hide footbox
+actor Teacher
+boundary "criteria:QuestionCriteriaPanel" as Criteria
+boundary "questionAIUI:QuestionAiStudio" as UI
+participant "apiClient:api.js" as Client
+control "questionController:QuestionController" as C
+control "generation:QuestionGenerationService" as Gen
+control "access:ContentAccessService" as Access
+participant "geminiProxy:GeminiProxy" as Proxy
+participant "geminiApi:GeminiApi" as Api
+participant "Google Gemini" as Google <<external>>
+boundary "draftList:QuestionDraftList" as DraftList
+
+Teacher -> Criteria: [UI] Click "Tao ban nhap cau hoi"
+Criteria -> UI: onGenerate() -> requestGenerate()
+opt drafts already exist
+  UI --> Teacher: [UI] Confirm replacing current drafts
+  Teacher -> UI: [UI] Agree or continue reviewing
+  break teacher keeps current drafts
+    UI --> Teacher: [UI] Keep drafts; generation request ends here
+  end
+end
+UI -> UI: runGenerate()
+UI -> UI: validate()
+alt FE criteria/context invalid
+  UI -> UI: setErrors(fieldErrors)
+  UI --> Teacher: [UI] Show errors; no HTTP request
+else FE input valid
+  UI -> Client: post("/questions/generate", form)
+  note over Client,C: csrfToken() obtains GET /api/auth/csrf; POST carries session cookie and X-XSRF-TOKEN.
+  Client -> C: [HTTP POST /api/questions/generate]\ngenerate(request, session)
+  ref over C: AUTH-TEACHER(session)\n401/403 stops this request
+  C -> Gen: prepare(request, teacher)
+  Gen -> Gen: [inline] Normalize request criteria/context
+  opt request.lessonId != null
+    Gen -> Access: ownedLesson(lessonId, teacher)
+    note right of Access
+      LessonRepository.findById(lessonId),
+      CourseRepository.findById(lesson.module.course.id),
+      then check course ownership.
+    end note
+    Access --> Gen: lesson or 403/404 exception
+    Gen -> Gen: [inline] Require TEXT; use lesson.content if context is empty
+  end
+  Gen -> Gen: [inline] Validate criteria/context
+  alt preparation rejected
+    Gen --> C: validation/ownership exception (400/403/404)
+    note over C,Client: Spring MVC invokes GlobalExceptionHandler.fields(e) or status(e).
+    C --> Client: HTTP 400/403/404 {message, errors?}
+    Client --> UI: throws ApiError
+    UI --> Teacher: [UI] Show field errors/message
+  else preparation successful
+    Gen -> Gen: prompt(subject, topic, difficulty, quantity, language, instructions, reference)
+    Gen --> C: prepared:PreparedGeneration
+
+    group Controller owns the provider call and empty-answer retry
+      loop at most 3 attempts; repeat only after EmptyAnswerException
+        C -> Proxy: generateText(prepared.prompt(), prepared.maxOutputTokens())
+        ref over Proxy,Google: GEMINI-CALL internal transport and model fallback\nSee question_ai_05_gemini
+        alt non-empty text returned
+          Proxy --> C: rawText:String
+          note right of C: Stop retry loop and parse once.
+        else EmptyAnswerException
+          Proxy --> C: throws EmptyAnswerException(502)
+          C -> C: [inline] Retry if attempt < GENERATE_ATTEMPTS; otherwise rethrow
+        else missing key, upstream failure or timeout
+          Proxy --> C: throws ResponseStatusException(503/502/504)
+          note right of C: Propagate immediately; no empty-answer retry.
+        end
+      end
+    end
+
+    alt provider failed or all 3 attempts returned empty
+      note over C,Client: Spring MVC invokes GlobalExceptionHandler.status(e).
+      C --> Client: HTTP 503/502/504 {message}
+      Client --> UI: throws ApiError
+      UI --> Teacher: [UI] Show error; keep criteria/context
+    else non-empty text obtained
+      C -> Gen: parseDrafts(prepared, rawText)
+      Gen -> Gen: mapper.readValue(json, TypeReference)
+      Gen -> Gen: validateDrafts(drafts, quantity, reference, subject, difficulty)
+      alt JSON or draft validation fails
+        Gen --> C: throws ResponseStatusException(502)
+        note right of C: Non-empty invalid drafts are not retried.
+        C --> Client: HTTP 502 {message} via exception advice
+        Client --> UI: throws ApiError
+        UI --> Teacher: [UI] Show error; keep criteria/context
+      else drafts valid
+        Gen --> C: List<Map<String,Object>> drafts
+        C --> Client: HTTP 200 drafts
+        Client --> UI: drafts
+        UI -> UI: setDrafts(drafts), setSelected([])
+        UI -> DraftList: [render] drafts, selection, edit/save callbacks
+        DraftList --> Teacher: [UI] Display questions, answers, explanations, contextReference
+      end
+    end
+  end
+end
+note over C,DraftList
+  The HTTP generate path uses prepare -> controller calls proxy -> parseDrafts.
+  It does not call QuestionService.generate or save Question/Answer entities.
+  Authentication and optional lesson context can read DB.
+end note
+@enduml
+
+@startuml question_ai_05_gemini
+title GEMINI-CALL - One direct controller call; model fallback inside GeminiApi
+autonumber
+hide footbox
+control "questionController:QuestionController" as C
+participant "geminiProxy:GeminiProxy" as Proxy
+participant "geminiApi:GeminiApi" as Api
+participant "Google Gemini" as Google <<external>>
+
+C -> Proxy: generateText(prompt, maxOutputTokens)
+Proxy -> Api: configured()
+Api --> Proxy: configured:boolean
+alt key missing
+  Proxy --> C: throws ResponseStatusException(503)
+else key configured
+  Proxy -> Api: post(prompt, maxOutputTokens)
+  loop candidate models remain; stop on text or non-retryable error
+    Api -> Api: send(candidate, prompt, maxOutputTokens)
+    Api -> Api: executeSend(candidate, prompt, genConfig)
+    Api -> Google: POST /models/{candidate}:generateContent\nx-goog-api-key + contents + generationConfig
+    Google --> Api: raw response or HTTP/transport error
+    opt HTTP 400 and genConfig contains thinkingConfig
+      Api -> Api: [inline] Remove thinkingConfig
+      Api -> Api: executeSend(candidate, prompt, genConfig)
+      Api -> Google: Retry same model without thinkingConfig
+      Google --> Api: raw response or error
+    end
+    alt response has text
+      Api -> Api: hasText(raw) -> extractText(raw)
+      opt candidate was a fallback
+        Api -> Api: promoteModel(candidate)
+      end
+      note right of Api: Successful response ends the model loop.
+    else empty response
+      Api -> Api: [inline] lastEmpty=raw; lastFailure=null; try next model
+    else HTTP 404/408/429/5xx
+      Api -> Api: [inline] lastFailure=e; try next model if available
+    else non-retryable HTTP error or transport timeout
+      note right of Api
+        Throw immediately; do not try remaining models.
+        A 400 is non-retryable after the optional
+        thinkingConfig removal attempt above.
+      end note
+    end
+  end
+  alt usable raw response
+    Api --> Proxy: raw:Map
+    Proxy -> Api: extractText(raw) {static}
+    Api --> Proxy: rawText:String
+    Proxy --> C: rawText
+  else non-retryable error or lastFailure remains
+    Api --> Proxy: throws HTTP/transport exception
+    alt ResourceAccessException
+      Proxy --> C: throws ResponseStatusException(504)
+    else upstream HTTP/other exception
+      Proxy --> C: throws ResponseStatusException(502)
+    end
+  else no text and no final HTTP failure
+    Api --> Proxy: lastEmpty:Map or null
+    Proxy -> Api: extractText(lastEmpty) {static}
+    Api --> Proxy: null or blank text
+    Proxy --> C: throws EmptyAnswerException(502)
+  end
+end
+note over C,Google
+  This diagram is one generateText invocation.
+  QuestionController may invoke it again only for EmptyAnswerException,
+  with at most 3 invocations in total. Model fallback stays inside GeminiApi.
+end note
+@enduml
+
+@startuml question_ai_06_save
+title Generate Question with AI - Review and save selected questions
+autonumber
+hide footbox
+actor Teacher
+boundary "draftList:QuestionDraftList" as DraftList
+boundary "questionAIUI:QuestionAiStudio" as UI
+participant "apiClient:api.js" as Client
+control "questionController:QuestionController" as C
+control "questionService:QuestionService" as S
+control "support:SupportService" as Support
+participant "bankRepository:QuestionBankRepository" as BR <<repository>>
+participant "questionRepository:QuestionRepository" as QR <<repository>>
+participant "answerRepository:AnswerRepository" as AR <<repository>>
+boundary "app:App" as App
+
+loop review and selection before saving
+  Teacher -> DraftList: [UI] Edit question/answer/explanation; select checkbox
+  DraftList -> UI: onUpdateDraft(index, update) / onSelect(index, checked)
+  UI -> UI: updateDraft(index, update) / selectDraft(index, checked)
+end
+Teacher -> DraftList: [UI] Click "Them N cau da chon"
+DraftList -> UI: onSave() -> saveSelected()
+UI -> UI: [inline] Map selected drafts to List<QuestionRequest>
+UI -> Client: post("/questions/bulk", payload)
+note over UI,Client: No selection or save already running: return before POST.
+note over Client,C: Client obtains CSRF token and sends session cookie + X-XSRF-TOKEN.
+Client -> C: [HTTP POST /api/questions/bulk]\naddQuestions(inputs, session)
+ref over C: AUTH-TEACHER(session)
+C -> S: createAll(teacher, inputs)
+note over S,AR: Spring transaction begins. Check 1 <= inputs.size <= 20.
+loop each selected QuestionRequest in order
+  S -> S: create(teacher, input)
+  S -> Support: validateQuestion(input)
+  Support --> S: valid or exception
+  S -> S: [inline] new Question; assign teacher
+  S -> S: apply(question, input)
+  S -> Support: bank(teacher, input.subject())
+  Support -> BR: findAll()
+  BR --> Support: banks
+  Support -> Support: [inline] Filter by teacher.id and subject
+  opt matching bank absent
+    Support -> BR: save(new QuestionBank(...))
+    BR --> Support: bank
+  end
+  Support --> S: bank
+  S -> S: [inline] Assign bank, subject, content, difficulty, explanation
+  S -> QR: save(question)
+  QR --> S: question with id
+  S -> S: replaceAnswers(question, input.answers())
+  S -> AR: findByQuestionId(question.id)
+  AR --> S: existingAnswers (empty for new question)
+  loop each old answer, if any
+    S -> AR: delete(oldAnswer)
+  end
+  loop each AnswerRequest
+    S -> S: [inline] new Answer; assign question/content/correct
+    S -> AR: save(answer)
+    AR --> S: answer
+  end
+  S -> S: view(question)
+  S -> AR: findByQuestionId(question.id)
+  AR --> S: answers
+  S -> S: [return create] {question, answers}
+end
+note over S,AR
+  Above is the successful path. Any runtime failure stops the loop
+  and Spring rolls back all writes in this transaction.
+  Validation and saving are interleaved per question.
+end note
+S --> C: savedQuestions (transaction commits on successful service completion)
+C --> Client: HTTP 200 savedQuestions
+Client --> UI: savedQuestions
+UI -> UI: setDrafts(unsavedDrafts), setSelected([])
+UI -> DraftList: [render] Keep remaining unselected drafts
+UI --> Teacher: [UI] Notify saved question count
+UI -> App: onSaved() -> reloadQuestions()
+App -> Client: api("/questions")
+Client -> C: [HTTP GET /api/questions] myQuestions(session)
+ref over C: AUTH-TEACHER(session)
+C -> S: list(teacher)
+S -> QR: findByTeacherId(teacher.id)
+QR --> S: questions
+loop each stored question
+  S -> S: view(question)
+  S -> AR: findByQuestionId(question.id)
+  AR --> S: answers
+end
+S --> C: questionViews
+C --> Client: HTTP 200 questionViews
+Client --> App: questionViews
+App -> App: Q(questionViews)
+note over UI,App
+  onSaved() refreshes App state; it does not navigate away from studio.
+  Discard/leave/regenerate confirmation is frontend-only.
+end note
+@enduml

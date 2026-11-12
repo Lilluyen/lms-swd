@@ -3,6 +3,7 @@ package com.example.lms.controller;
 import com.example.lms.dto.QuestionGenerationRequest;
 import com.example.lms.dto.QuestionRequest;
 import com.example.lms.entity.User;
+import com.example.lms.integration.GeminiProxy;
 import com.example.lms.repository.AnswerRepository;
 import com.example.lms.repository.CourseRepository;
 import com.example.lms.repository.CourseReviewRepository;
@@ -11,18 +12,21 @@ import com.example.lms.repository.QuestionRepository;
 import com.example.lms.repository.WishlistRepository;
 import com.example.lms.service.CourseService;
 import com.example.lms.service.CurrentUserService;
+import com.example.lms.service.QuestionGenerationService;
 import com.example.lms.service.QuestionService;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 
-/** Question-bank HTTP boundary backed by {@link QuestionService}. */
+/** Question-bank CRUD uses QuestionService; AI draft transport is called directly. */
 @RestController
 @RequestMapping("/api")
 public class QuestionController extends BaseController {
 
   private final QuestionService questionService;
+  private final QuestionGenerationService generation;
+  private final GeminiProxy geminiProxy;
 
   public QuestionController(
     CourseRepository courses,
@@ -33,7 +37,9 @@ public class QuestionController extends BaseController {
     WishlistRepository wishlists,
     CourseService courseService,
     CurrentUserService currentUser,
-    QuestionService questionService
+    QuestionService questionService,
+    QuestionGenerationService generation,
+    GeminiProxy geminiProxy
   ) {
     super(
       courses,
@@ -46,6 +52,8 @@ public class QuestionController extends BaseController {
       currentUser
     );
     this.questionService = questionService;
+    this.generation = generation;
+    this.geminiProxy = geminiProxy;
   }
 
   @GetMapping("/questions")
@@ -85,7 +93,15 @@ public class QuestionController extends BaseController {
 
   @PostMapping("/questions/generate")
   Object generate(@RequestBody QuestionGenerationRequest input, HttpSession session) {
-    return questionService.generate(input, teacher(session));
+    var prepared = generation.prepare(input, teacher(session));
+    for (int attempt = 1; ; attempt++) {
+      try {
+        String raw = geminiProxy.generateText(prepared.prompt(), prepared.maxOutputTokens());
+        return generation.parseDrafts(prepared, raw);
+      } catch (GeminiProxy.EmptyAnswerException e) {
+        if (attempt >= QuestionGenerationService.GENERATE_ATTEMPTS) throw e;
+      }
+    }
   }
 
   @GetMapping("/banks")

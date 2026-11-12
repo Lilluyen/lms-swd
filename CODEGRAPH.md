@@ -7,7 +7,7 @@ CodeGraph provides reusable structural context for future coding sessions: files
 ## Current index
 
 - CodeGraph CLI: `3.1.1`
-- Files indexed: `161` (backend Java + tests, frontend `src`, database SQL/migrations, scripts, root docs/config)
+- Files indexed: `164` (backend Java + tests, frontend `src`, database SQL/migrations, scripts, root docs/config)
 - Analysis: native semantic, backend `native`, 0 degraded files
 - Dependency cycles reported by orientation: `0`
 - Git baseline: `3b32a62` (`Add replace-or-append AI lesson generation`); index includes the working-tree backend naming refactor.
@@ -57,7 +57,9 @@ TeacherController ─┬─> CourseContentService ─┬─> ContentAccessServic
 
 CourseController ─┬─> CourseContentService / ModuleContentService / LessonContentService
                   └─> CourseService (catalogue, reviews, ownership)
-QuestionController ─> QuestionService ─> QuestionGenerationService ─> GeminiProxy ─> GeminiApi
+QuestionController ─┬─> QuestionService (CRUD / bulk save)
+                    ├─> QuestionGenerationService (prepare prompt / parse drafts)
+                    └─> GeminiProxy ─> GeminiApi (AI generation call)
 QuizController     ─> QuizService (management, attempts, scoring, result snapshots)
 QuizAiController   ─> QuizAiService ─> GeminiProxy + QuestionService + QuizService
 QuizFeedbackController ─> QuizFeedbackService ─> GeminiProxy + QuizService (stored aiFeedback)
@@ -73,7 +75,7 @@ CurrentUserService is the single source for "who is logged in"; SupportService h
 |---|---|---|
 | `BaseController` | `CurrentUserService` | shared `me/student/teacher`, `owned*` guards, view mappers |
 | `CourseController` | `CourseContentService`, `ModuleContentService`, `LessonContentService`, `CourseService` | catalogue, course CRUD, modules, lessons, reviews |
-| `QuestionController` | `QuestionService` (delegates AI drafts to `QuestionGenerationService`) | thin HTTP boundary for question bank, bulk save and AI drafts |
+| `QuestionController` | `QuestionService`, `QuestionGenerationService`, `GeminiProxy` | CRUD/bulk save via QuestionService; AI drafts prepare/parse via QuestionGenerationService, direct GeminiProxy call from controller |
 | `QuizController` | `QuizService` | thin HTTP boundary for quiz CRUD, attempts, scoring and results |
 | `QuizAiController` | `QuizAiService` | AI quiz drafts and saving an approved AI quiz |
 | `QuizFeedbackController` | `QuizFeedbackService` | AI analysis of a submitted attempt, cached per result |
@@ -83,7 +85,7 @@ CurrentUserService is the single source for "who is logged in"; SupportService h
 | `AuthController` | `CurrentUserService` | email/password, Google login, profile |
 | `FilesController` | `StorageService` | served uploads for signed-in users |
 
-`GeminiApi` owns transport (HTTP, key, model fallback list, response extraction); `GeminiProxy` owns prompts, parsing and domain error mapping, so feature services never build URLs. `GeminiApi.post` tries the primary model then each `GEMINI_FALLBACK_MODELS` entry when a model is unknown, rate limited, fails with 4xx/5xx worth retrying, or answers empty; auth/bad-request errors fail fast. `GeminiProxy.generateText` raises `EmptyAnswerException` on an empty answer, and `QuestionGenerationService` alone retries that case (3 attempts) while non-empty drafts that fail context checks are never retried.
+`GeminiApi` owns transport (HTTP, key, model fallback list, response extraction); `GeminiProxy` owns prompts, parsing and domain error mapping, so feature services never build URLs. `GeminiApi.post` tries the primary model then each `GEMINI_FALLBACK_MODELS` entry when a model is unknown, rate limited, fails with 4xx/5xx worth retrying, or answers empty; auth/bad-request errors fail fast. For `/api/questions/generate`, `QuestionController` calls `QuestionGenerationService.prepare`, invokes `GeminiProxy.generateText` directly (up to 3 attempts only for `EmptyAnswerException`), then calls `QuestionGenerationService.parseDrafts`. Non-empty drafts that fail context checks are never retried. The existing service-level `generate` entry point retains its previous behavior for internal callers.
 
 ### Frontend shell → pages → teacher components
 
@@ -120,18 +122,18 @@ Leaf modules carry no page state: `teacher/shared.jsx` (constants, `Field`, `Cru
 - `BaseController.java`: shared session/ownership helpers for the feature controllers.
 - `QuestionService.java`, `QuizService.java`, `QuizAiService.java`, `QuizFeedbackService.java`: question/quiz feature boundaries; Spring Data `*Repository` interfaces implement the diagram's DAO responsibilities.
 - `CourseController.java`, `QuestionController.java`, `QuizController.java`, `LearningController.java`: public/authenticated API split by feature (courses, question bank, quizzes, enrollments/progress).
-- `QuestionGenerationService.java`: grounded question drafts for the AI studio; one retry budget for empty Gemini answers (`GENERATE_ATTEMPTS = 3`), no retry when the answer is non-empty but lacks context support.
+- `QuestionGenerationService.java`: prepares a validated prompt/context in `PreparedGeneration` and parses/validates drafts. The question controller calls the proxy directly and shares the empty-answer budget (`GENERATE_ATTEMPTS = 3`); service-level generation remains available for internal callers.
 - `TeacherController.java` → `CourseContentService.java`, `ModuleContentService.java`, `LessonContentService.java`: Teacher Course–Module–Lesson HTTP and business flow, sharing `ContentAccessService` and `ContentValidator`.
 - `GeminiApi.java` (transport) → `GeminiProxy.java` (prompts, parsing, error mapping).
 - `PaymentController.java` → `PaymentService.java` → `PayOSClient.java`: SE Pay checkout, order lifecycle, reconciliation and enrollment; `EnrollmentService.java` owns enrollment rules for `LearningController`.
 - `CurrentUserService.java`: shared authenticated-user and role boundary.
 - `SupportService.java`: shared text/validation helpers (top fan-out in the graph).
-- `AiContentService.java`, `QuestionGenerationService.java`: grounded generation on top of `GeminiProxy`.
+- `AiContentService.java`: course/module/lesson AI flows on top of `GeminiProxy`, unchanged by question-controller orchestration. `QuestionGenerationService` supplies the question prompt and draft validation helpers.
 - `frontend/src/main.jsx`: application state, side effects and routing; page UI lives in `frontend/src/pages/` by feature.
 - `frontend/src/teacher.jsx`: barrel export for feature components in `frontend/src/teacher/`.
 - `frontend/src/style.css`: ordered style-layer imports from `frontend/src/styles/`.
 - `scripts/regression_test.py`, `content_test.py`, `ui_test.py`, `ui_student_test.py`, `ai_test.py`, `smoke_test.py`: executable behavior checks.
-- Tests: `backend/src/test/java/.../controller` (`QuizLiveAnswerTest`, `QuizAiControllerTest`) and `service` (`QuizAiServiceTest`, `QuizAnswerCheckTest`, `QuizFeedbackServiceTest`).
+- Tests: `backend/src/test/java/.../controller` (`QuestionGenerationControllerTest`, `QuizLiveAnswerTest`, `QuizAiControllerTest`) and `service` (`QuizAiServiceTest`, `QuizAnswerCheckTest`, `QuizFeedbackServiceTest`).
 - Migrations: `2026-10-30_course_content.sql`, `2026-10-31_sepay_reviews.sql`, `2026-11-08_quiz_ai_feedback.sql`.
 
 ## Maintenance policy

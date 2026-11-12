@@ -19,7 +19,7 @@ public class QuestionGenerationService {
   private static final List<String> DIFFICULTIES = List.of("EASY", "MEDIUM", "HARD");
   private static final List<String> LANGUAGES = List.of("ENGLISH", "VIETNAMESE");
   /** Gemini sometimes answers with an empty string; ask it again a few times. */
-  private static final int GENERATE_ATTEMPTS = 3;
+  public static final int GENERATE_ATTEMPTS = 3;
   private final GeminiProxy geminiProxy;
   private final ContentAccessService content;
   private final ObjectMapper mapper = new ObjectMapper();
@@ -32,7 +32,24 @@ public class QuestionGenerationService {
     this.content = content;
   }
 
+  /** Full generation entry point retained for existing service callers. */
   public List<Map<String, Object>> generate(QuestionGenerationRequest input, User teacher) {
+    PreparedGeneration prepared = prepare(input, teacher);
+    String raw = generateAnswer(prepared.prompt(), prepared.maxOutputTokens());
+    return parseDrafts(prepared, raw);
+  }
+
+  /** Validated context and prompt, ready for the controller to send to Gemini. */
+  public record PreparedGeneration(
+    String subject,
+    String difficulty,
+    int quantity,
+    String reference,
+    String prompt,
+    int maxOutputTokens
+  ) {}
+
+  public PreparedGeneration prepare(QuestionGenerationRequest input, User teacher) {
     String subject = trim(input.subject());
     String topic = trim(input.topic());
     String difficulty = upper(input.difficulty(), "MEDIUM");
@@ -64,11 +81,20 @@ public class QuestionGenerationService {
     if (!errors.isEmpty()) throw new FieldValidationException(errors);
 
     String prompt = prompt(subject, topic, difficulty, input.quantity(), language, instructions, reference);
-    String raw = generateAnswer(prompt, Math.min(8192, 900 + input.quantity() * 520));
+    return new PreparedGeneration(
+      subject, difficulty, input.quantity(), reference, prompt,
+      Math.min(8192, 900 + input.quantity() * 520)
+    );
+  }
+
+  /** Parses and validates Gemini's answer without making any provider calls. */
+  public List<Map<String, Object>> parseDrafts(PreparedGeneration prepared, String raw) {
     try {
       String json = raw.trim().replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("(?s)```\\s*$", "");
       List<Map<String, Object>> drafts = mapper.readValue(json, new TypeReference<>() {});
-      validateDrafts(drafts, input.quantity(), reference, subject, difficulty);
+      validateDrafts(
+        drafts, prepared.quantity(), prepared.reference(), prepared.subject(), prepared.difficulty()
+      );
       return drafts;
     } catch (ResponseStatusException e) {
       throw e;

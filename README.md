@@ -227,7 +227,9 @@ TeacherController ─┬─> CourseContentService ─┐
                    └─> LessonContentService ─┘
 
 CourseController   ─> các service nội dung ở trên (khóa học, module, lesson, review)
-QuestionController ─> QuestionService ─> QuestionGenerationService ─> GeminiProxy ─> GeminiApi
+QuestionController ─┬─> QuestionService (CRUD / bulk save)
+                    ├─> QuestionGenerationService (prepare prompt / parse drafts)
+                    └─> GeminiProxy ─> GeminiApi (AI generation call)
 QuizController     ─> quiz / attempt / scoring / result snapshot
 LearningController ─> enrollment, wishlist, learning progress
 PaymentController  ─> PaymentService ─> cấp enrollment khi đơn đã thanh toán

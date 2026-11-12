@@ -10,18 +10,21 @@ Run:
 """
 import http.cookiejar
 import http.client
+import base64
 import json
 import os
 import re
 import shutil
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 BASE = os.environ.get("API_BASE", "http://127.0.0.1:8080/api")
 APP = os.environ.get("APP_URL", "http://127.0.0.1:5199")
@@ -157,6 +160,7 @@ class Cdp:
 
         asyncio.run_coroutine_threadsafe(_open(), self.loop).result(15)
         self.id = 0
+        self.requests = []
 
     async def _call(self, target, method, params):
         await self.ws.send(
@@ -164,6 +168,9 @@ class Cdp:
         )
         while True:
             message = json.loads(await self.ws.recv())
+            if message.get("method") == "Network.requestWillBeSent":
+                request = message["params"]["request"]
+                self.requests.append((request["method"], request["url"]))
             if message.get("id") == target:
                 if "error" in message:
                     raise RuntimeError(f"{method}: {message['error']}")
@@ -193,6 +200,16 @@ class Cdp:
                 return True
             time.sleep(0.3)
         raise AssertionError(f"timeout waiting for {label or expression}")
+
+    def click(self, selector):
+        point = self.js("""(() => {
+          const rect = document.querySelector(%s).getBoundingClientRect();
+          return {x: rect.x + rect.width / 2, y: rect.y + rect.height / 2};
+        })()""" % json.dumps(selector))
+        for event_type in ("mousePressed", "mouseReleased"):
+            self.send("Input.dispatchMouseEvent", {
+                "type": event_type, "button": "left", "clickCount": 1, **point,
+            })
 
 
 def json_endpoint(path, method="GET"):
@@ -301,6 +318,23 @@ errors = cdp.js(
 assert any("5 đến 100" in e for e in errors), errors
 print("ok  client-side validation shows errors under fields")
 
+fixtures = tempfile.TemporaryDirectory(prefix="learnova-ui-fixtures-")
+thumbnail = Path(fixtures.name) / "cover.png"
+thumbnail.write_bytes(base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII="
+))
+lesson_file = Path(fixtures.name) / "lesson.txt"
+lesson_file.write_text("Tài liệu bài học kiểm thử tải tệp.")
+
+def pick_file(path):
+    root = cdp.send("DOM.getDocument")["root"]["nodeId"]
+    node = cdp.send("DOM.querySelector", {"nodeId": root, "selector": "input[type=file]"})["nodeId"]
+    cdp.send("DOM.setFileInputFiles", {"nodeId": node, "files": [str(path)]})
+
+pick_file(thumbnail)
+cdp.wait_for("!!document.querySelector('.thumb-preview')", label="uploaded course thumbnail")
+print("ok  course thumbnail upload fills the form")
+
 cdp.js(
     """[...document.querySelectorAll('button')]
         .find(b => b.textContent.includes('Generate with AI')).click()"""
@@ -401,12 +435,12 @@ print("ok  lesson list expands inside the module row")
 
 cdp.js("document.querySelector('.lesson-name').click()")
 cdp.wait_for(
-    "document.body.innerText.toLowerCase().includes('lesson editor')", label="lesson editor"
+    "!!document.querySelector('[data-testid=\"lesson-form\"]')", label="lesson editor"
 )
 labels = cdp.js(
     """[...document.querySelectorAll('.field > label')].map(l => l.textContent.trim())"""
 )
-for expected in ["Module", "Tiêu đề bài học", "Content type", "Order"]:
+for expected in ["Tên bài học", "Loại bài học", "Lesson content", "Thời lượng (phút)"]:
     assert any(expected in l for l in labels), (expected, labels)
 cdp.wait_for(
     """[...document.querySelectorAll('textarea')]
@@ -414,6 +448,43 @@ cdp.wait_for(
     label="lesson content loaded into the editor",
 )
 print("ok  lesson editor loads the existing lesson")
+
+edited_content = "Nội dung bài học đã được giáo viên chỉnh sửa và lưu lại."
+cdp.js(
+    """(() => { const el = document.querySelector('[data-testid="lesson-form"] textarea');
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+      setter.call(el, %s);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    })()""" % json.dumps(edited_content)
+)
+assert cdp.js("window.__uiErrors.length === 0"), cdp.js("window.__uiErrors")
+cdp.js(
+    """[...document.querySelectorAll('button')]
+        .find(b => b.textContent.includes('Lưu bài học')).click()"""
+)
+cdp.wait_for("!!document.querySelector('.mod-row')", label="saved lesson returns to module board")
+saved_lessons = call(teacher, f"/teacher/modules/{module['id']}/lessons")["lessons"]
+assert next(item for item in saved_lessons if item["id"] == lesson["id"])["content"] == edited_content
+print("ok  editing lesson content saves the new value")
+
+cdp.js("[...document.querySelectorAll('.mod-row button')].find(b => b.textContent.includes('Lessons')).click()")
+cdp.wait_for("!!document.querySelector('.lesson-name')", label="saved lesson row")
+cdp.js("document.querySelector('.lesson-name').click()")
+cdp.wait_for(
+    "document.querySelector('[data-testid=\"lesson-form\"] textarea')?.value === " + json.dumps(edited_content),
+    label="saved lesson content reloaded",
+)
+cdp.click('[data-testid="lesson-form"] .ant-select')
+cdp.wait_for("!!document.querySelector('[title=\"File\"]')", label="file lesson option")
+cdp.click('[title="File"]')
+cdp.wait_for("!!document.querySelector('input[type=file]')", label="lesson file picker")
+pick_file(lesson_file)
+cdp.wait_for("!!document.querySelector('.file-chip')", label="uploaded lesson file")
+cdp.js("[...document.querySelectorAll('button')].find(b => b.textContent.includes('Lưu bài học')).click()")
+cdp.wait_for("!!document.querySelector('.mod-row')", label="saved file lesson")
+saved = next(item for item in call(teacher, f"/teacher/modules/{module['id']}/lessons")["lessons"] if item["id"] == lesson["id"])
+assert saved["contentType"] == "FILE" and saved["fileUrl"].startswith("/api/files/"), saved
+print("ok  file lesson uploads and saves")
 
 # --- grounded question AI workspace ---------------------------------------
 cdp.js(
@@ -444,8 +515,10 @@ print("ok  grounded question AI workspace has lesson picker, editor and inline v
 # --- console health ---------------------------------------------------------
 page_errors = cdp.js("window.__uiErrors || []")
 assert page_errors == [], page_errors
+assert ("POST", APP + "/") not in cdp.requests, "Upload sent a duplicate request to the app page"
 print("ok  no runtime error captured during the walkthrough")
 
 chrome.terminate()
+fixtures.cleanup()
 shutil.rmtree("/tmp/chrome-ui-test", ignore_errors=True)
 print("ALL UI CHECKS PASSED")

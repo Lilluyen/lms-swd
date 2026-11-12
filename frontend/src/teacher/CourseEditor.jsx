@@ -83,11 +83,11 @@ export function CourseEditor({ courseId, onSaved, onCancel }) {
     setErrors((e) => ({ ...e, cover: undefined }));
     if (!["image/jpeg", "image/png"].includes(file.type)) {
       setErrors((e) => ({ ...e, cover: "Ảnh bìa phải là JPG hoặc PNG" }));
-      return;
+      return false;
     }
     if (file.size > 2 * 1024 * 1024) {
       setErrors((e) => ({ ...e, cover: "Ảnh bìa tối đa 2 MB" }));
-      return;
+      return false;
     }
     setUploading(true);
     try {
@@ -101,6 +101,7 @@ export function CourseEditor({ courseId, onSaved, onCancel }) {
     } finally {
       setUploading(false);
     }
+    return false;
   };
 
   return (
