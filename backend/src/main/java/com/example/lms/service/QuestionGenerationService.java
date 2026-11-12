@@ -5,6 +5,7 @@ import com.example.lms.entity.Lesson;
 import com.example.lms.entity.User;
 import com.example.lms.integration.GeminiProxy;
 import com.example.lms.web.FieldValidationException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
@@ -89,27 +90,26 @@ public class QuestionGenerationService {
 
   /** Parses and validates Gemini's answer without making any provider calls. */
   public List<Map<String, Object>> parseDrafts(PreparedGeneration prepared, String raw) {
+    List<Map<String, Object>> drafts;
     try {
-      String json = raw.trim().replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("(?s)```\\s*$", "");
-      List<Map<String, Object>> drafts = mapper.readValue(json, new TypeReference<>() {});
-      validateDrafts(
-        drafts, prepared.quantity(), prepared.reference(), prepared.subject(), prepared.difficulty()
-      );
-      return drafts;
-    } catch (ResponseStatusException e) {
-      throw e;
-    } catch (Exception e) {
+      String json = trim(raw).replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("(?s)```\\s*$", "");
+      drafts = mapper.readValue(json, new TypeReference<>() {});
+    } catch (JsonProcessingException e) {
       throw new ResponseStatusException(
         HttpStatus.BAD_GATEWAY,
-        "Gemini trả về bản nháp không hợp lệ hoặc không bám đủ nội dung bài học. Hãy bổ sung ngữ cảnh và tạo lại."
+        "Gemini trả về dữ liệu câu hỏi sai định dạng JSON. Vui lòng tạo lại.", e
       );
     }
+    validateDrafts(
+      drafts, prepared.quantity(), prepared.reference(), prepared.subject(), prepared.difficulty()
+    );
+    return drafts;
   }
 
   /**
    * Asks Gemini again only when it answers with an empty string. A non-empty
-   * answer that fails the grounding checks is never retried: the teacher has to
-   * add context instead.
+   * answer that fails validation is never retried automatically; its specific
+   * validation error is returned to the teacher.
    */
   private String generateAnswer(String prompt, int maxOutputTokens) {
     for (int attempt = 1; ; attempt++) {
@@ -128,30 +128,38 @@ public class QuestionGenerationService {
     String subject,
     String difficulty
   ) {
-    if (drafts == null || drafts.size() != quantity) throw new IllegalArgumentException("quantity");
+    if (drafts == null) throw invalidDraft("Gemini chưa trả về danh sách câu hỏi.");
+    if (drafts.size() != quantity) throw invalidDraft(
+      "Gemini trả về " + drafts.size() + " câu hỏi, trong khi yêu cầu " + quantity + " câu."
+    );
     String normalizedSource = normalize(reference);
+    String sourceWithoutFormatting = normalizeFormatting(reference);
     int sequence = 0;
     for (Map<String, Object> draft : drafts) {
+      int questionNumber = ++sequence;
+      String label = "Câu hỏi số " + questionNumber;
+      if (draft == null) throw invalidDraft(label + " từ Gemini không đúng cấu trúc.");
       if (!(draft.get("content") instanceof String question) || question.isBlank() || question.length() > 5000)
-        throw new IllegalArgumentException("content");
+        throw invalidDraft(label + " thiếu nội dung hoặc vượt quá 5.000 ký tự.");
       if (!(draft.get("explanation") instanceof String explanation) || explanation.isBlank())
-        throw new IllegalArgumentException("explanation");
-      if (!(draft.get("contextReference") instanceof String quote) || quote.trim().length() < 5 || !normalizedSource.contains(normalize(quote)))
-        throw new IllegalArgumentException("reference");
+        throw invalidDraft(label + " thiếu giải thích đáp án.");
+      if (!(draft.get("contextReference") instanceof String quote) || normalizeFormatting(quote).length() < 5 ||
+        !(normalizedSource.contains(normalize(quote)) || sourceWithoutFormatting.contains(normalizeFormatting(quote))))
+        throw invalidDraft("Trích dẫn nguồn của câu hỏi số " + questionNumber + " không khớp nội dung bài học.");
       if (!(draft.get("answers") instanceof List<?> answers) || answers.size() < 2 || answers.size() > 6)
-        throw new IllegalArgumentException("answers");
+        throw invalidDraft(label + " phải có từ 2 đến 6 đáp án.");
       int correct = 0;
       for (Object rawAnswer : answers) {
         if (!(rawAnswer instanceof Map<?, ?> answer) || !(answer.get("content") instanceof String text) || text.isBlank())
-          throw new IllegalArgumentException("answer");
+          throw invalidDraft(label + " có đáp án thiếu nội dung hoặc sai cấu trúc.");
         if (Boolean.TRUE.equals(answer.get("correct"))) correct++;
       }
-      if (correct != 1) throw new IllegalArgumentException("correct");
+      if (correct != 1) throw invalidDraft(label + " phải có đúng một đáp án đúng.");
       draft.put("subject", subject);
       draft.put("difficulty", difficulty);
       draft.put("questionType", "MULTIPLE_CHOICE");
       draft.put("points", 1);
-      draft.put("draftId", "ai-" + (++sequence) + "-" + UUID.randomUUID());
+      draft.put("draftId", "ai-" + sequence + "-" + UUID.randomUUID());
     }
   }
 
@@ -176,12 +184,26 @@ public class QuestionGenerationService {
       .append("Return ONLY a JSON array with exactly ").append(quantity).append(" objects. Each object must contain: ")
       .append("content, explanation, contextReference, and answers. answers is an array of 4 objects with content and correct; exactly one is correct. ")
       .append("contextReference must be a short exact quote copied verbatim from lesson_context that supports the answer. ")
-      .append("Do not use markdown, HTML, code fences, outside knowledge, or near-duplicate questions.");
+      .append("Preserve the source's words, punctuation, and any inline formatting in contextReference. ")
+      .append("Use plain text without Markdown or HTML for content, explanation, and answer text. ")
+      .append("Do not wrap the JSON in code fences or use outside knowledge or near-duplicate questions.");
     return out.toString();
   }
 
   private static String normalize(String value) {
     return trim(value).replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+  }
+
+  /** Ignore paired inline-code/strong-emphasis markers, retaining words and code operators. */
+  private static String normalizeFormatting(String value) {
+    return normalize(trim(value)
+      .replaceAll("(?s)(`+)([^`]+)\\1", "$2")
+      .replaceAll("(?s)(?<![\\p{L}\\p{N}_*])\\*\\*(\\S(?:.*?\\S)?)\\*\\*(?![\\p{L}\\p{N}_*])", "$1")
+      .replaceAll("(?s)(?<![\\p{L}\\p{N}_])__(\\S(?:.*?\\S)?)__(?![\\p{L}\\p{N}_])", "$1"));
+  }
+
+  private static ResponseStatusException invalidDraft(String reason) {
+    return new ResponseStatusException(HttpStatus.BAD_GATEWAY, reason + " Vui lòng tạo lại.");
   }
 
   private static String trim(String value) {

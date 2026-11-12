@@ -1,5 +1,16 @@
 # Báo cáo kiểm thử Learnova — 12/11/2026
 
+## Cập nhật 13/11/2026: context Markdown trong Generate Question with AI
+
+- Tái hiện bằng đúng payload Dependency Injection có chữ đậm và inline code: Gemini thật trả đủ 5 câu, `finishReason=STOP`, nhưng trích dẫn câu 2 bỏ dấu `**` quanh nhãn `Constructor Injection:`. Backend trước bản sửa trả HTTP 502 với thông báo yêu cầu bổ sung ngữ cảnh. Câu 3 và 4 cũng có khác biệt định dạng tương tự.
+- `QuestionGenerationService` chấp nhận khác biệt dấu định dạng inline code/chữ đậm khi đối chiếu trích dẫn. Giữ nguyên context, trích dẫn hiển thị và kiểm tra từ ngữ/dấu câu; vẫn từ chối trích dẫn đổi kiến thức hoặc toán tử/identifier trong các ca hồi quy.
+- Tách thông báo lỗi JSON, số câu, trích dẫn (kèm số thứ tự câu), giải thích và đáp án. Prompt cho phép giữ định dạng nguồn trong `contextReference`. Controller vẫn gọi trực tiếp proxy; không sửa các class tích hợp hoặc luồng course/quiz.
+- Phát lại cùng phản hồi Gemini đã gây lỗi qua `QuestionGenerationService.parseDrafts`: PASS, chấp nhận đủ 5 câu. Không gọi lại provider ở bước phát lại; kết quả này xác nhận bản sửa với phản hồi đã thu được, không bảo đảm mọi lần sinh AI đều hợp lệ.
+- Kiểm tra HTTP trên backend H2 riêng với phản hồi đã ghi: văn bản thường, Markdown inline và Markdown có tiêu đề `#`/`##` đều trả HTTP 200 với 5 bản nháp, chưa lưu câu hỏi. Ba ca JSON lỗi, sai trích dẫn và sai số câu trả HTTP 502 với lý do riêng. Kết quả tại [http-replay/results.json](backend/target/di-question-diagnostic/http-replay/results.json).
+- Backend phát triển cổng 8080 trước đó vẫn chạy tiến trình khởi động 02:48, trước bản sửa build 03:14 và không có devtools/debugger. Đã khởi động lại lúc 03:20 để nạp mã mới; health CSRF trả HTTP 200. Việc khởi động lại có thể yêu cầu đăng nhập lại.
+- `mvn -B verify`: PASS — 33 test, gồm 14 ca mới cho trích dẫn Markdown, dữ liệu sai và thông báo lỗi. Các test controller generate/quyền/retry/lưu và quiz hiện có đều đạt.
+- Artifact local: [request Markdown](backend/target/di-question-diagnostic/markdown/request.json), [phản hồi Gemini](backend/target/di-question-diagnostic/markdown/original-response.json). Các artifact dưới `target/` không được commit.
+
 ## Cập nhật: controller gọi trực tiếp proxy cho AI Question
 
 - Endpoint `POST /api/questions/generate` gọi `QuestionGenerationService.prepare(...)`, sau đó **QuestionController gọi trực tiếp GeminiProxy.generateText(...)**, rồi dùng `parseDrafts(...)` để kiểm tra kết quả. Retry rỗng tối đa 3 lần do controller điều phối.

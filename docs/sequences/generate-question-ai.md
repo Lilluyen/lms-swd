@@ -197,7 +197,9 @@ Nếu giáo viên tự dán context, bỏ qua C1–C9. Danh sách course ở O6 
 | G27 | Studio → Studio | `setDrafts(drafts)`, `setSelected([])` |
 | G28 | Studio → QuestionDraftList → Teacher | `[render/UI] Hiển thị bản nháp, đáp án, giải thích và contextReference` |
 
-Generation kiểm tra số câu đúng yêu cầu, nội dung không trống, giải thích, trích dẫn xuất hiện trong context sau khi chuẩn hóa, 2–6 đáp án và đúng một đáp án đúng. Prompt yêu cầu 4 đáp án. Các kiểm tra này không chứng minh hoàn toàn tính đúng đắn ngữ nghĩa; giáo viên vẫn phải duyệt.
+Generation kiểm tra số câu đúng yêu cầu, nội dung không trống, giải thích, trích dẫn xuất hiện trong context sau khi chuẩn hóa, 2–6 đáp án và đúng một đáp án đúng. Khi đối chiếu trích dẫn, backend chấp nhận khác biệt khoảng trắng, hoa/thường và các dấu định dạng Markdown inline code/chữ đậm có cặp; vẫn yêu cầu khớp từ ngữ, dấu câu và toán tử trong code. Prompt yêu cầu 4 đáp án. Các kiểm tra này không chứng minh hoàn toàn tính đúng đắn ngữ nghĩa; giáo viên vẫn phải duyệt.
+
+Nếu kết quả không hợp lệ, `parseDrafts` trả HTTP 502 với lý do cụ thể: JSON sai định dạng, sai số câu, trích dẫn không khớp (kèm số thứ tự câu), thiếu giải thích hoặc đáp án không hợp lệ. Các lỗi này không còn dùng chung thông báo yêu cầu bổ sung ngữ cảnh. Luồng controller → proxy và chính sách retry rỗng không đổi.
 
 G24 còn gán `subject`, `difficulty`, `questionType`, `points`, `draftId` vào draft. Chưa tạo entity Question/Answer hay ghi các repository câu hỏi ở giai đoạn này; xác thực/context vẫn có thể đọc DB.
 
