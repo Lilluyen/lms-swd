@@ -4,7 +4,7 @@ import com.example.lms.dto.*;
 import com.example.lms.entity.Question;
 import com.example.lms.entity.Quiz;
 import com.example.lms.entity.User;
-import com.example.lms.integration.Integrations;
+import com.example.lms.integration.GeminiProxy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
@@ -15,22 +15,22 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class QuizAiService {
-  private final Integrations integrations;
+  private final GeminiProxy geminiProxy;
   private final ObjectMapper mapper;
   private final SupportService support;
   private final QuestionService questions;
   private final QuizService quizzes;
 
-  public QuizAiService(Integrations integrations, ObjectMapper mapper,
+  public QuizAiService(GeminiProxy geminiProxy, ObjectMapper mapper,
       SupportService support, QuestionService questions, QuizService quizzes) {
-    this.integrations = integrations;
+    this.geminiProxy = geminiProxy;
     this.mapper = mapper;
     this.support = support;
     this.questions = questions;
     this.quizzes = quizzes;
   }
 
-  public List<QuestionInput> draft(QuizAiInput input) {
+  public List<QuestionRequest> draft(QuizAiRequest input) {
     String title = support.text(input.title(), 3, 200, "Tiêu đề quiz");
     String subject = support.text(input.subject(), 1, 100, "Môn học");
     if (input.quantity() < 1 || input.quantity() > 20 ||
@@ -55,13 +55,13 @@ public class QuizAiService {
     } catch (java.io.IOException e) {
       throw new IllegalStateException(e);
     }
-    String raw = integrations.generateText(prompt, Math.min(16384, 1200 + input.quantity() * 650));
+    String raw = geminiProxy.generateText(prompt, Math.min(16384, 1200 + input.quantity() * 650));
     try {
       String json = raw.trim().replaceAll("(?s)^```(?:json)?\\s*", "")
         .replaceAll("(?s)```\\s*$", "");
       List<Map<String, Object>> output = mapper.readValue(json, new TypeReference<>() {});
       if (output == null || output.size() != input.quantity()) throw new IllegalArgumentException();
-      List<QuestionInput> drafts = new ArrayList<>();
+      List<QuestionRequest> drafts = new ArrayList<>();
       Set<String> seen = new HashSet<>();
       for (var item : output) {
         if (!(item.get("content") instanceof String content) ||
@@ -71,16 +71,16 @@ public class QuizAiService {
             !(item.get("answers") instanceof List<?> choices) || choices.size() != 4) {
           throw new IllegalArgumentException();
         }
-        List<AnswerInput> answers = new ArrayList<>();
+        List<AnswerRequest> answers = new ArrayList<>();
         Set<String> answerTexts = new HashSet<>();
         for (Object choice : choices) {
           if (!(choice instanceof Map<?, ?> answer) ||
               !(answer.get("content") instanceof String text) ||
               !(answer.get("correct") instanceof Boolean correct) ||
               !answerTexts.add(normalize(text))) throw new IllegalArgumentException();
-          answers.add(new AnswerInput(text.trim(), correct));
+          answers.add(new AnswerRequest(text.trim(), correct));
         }
-        var question = new QuestionInput(subject, content.trim(), input.difficulty(), explanation.trim(), answers);
+        var question = new QuestionRequest(subject, content.trim(), input.difficulty(), explanation.trim(), answers);
         support.validateQuestion(question);
         drafts.add(question);
       }
@@ -92,7 +92,7 @@ public class QuizAiService {
   }
 
   @Transactional
-  public Quiz save(QuizAiSaveInput input, User teacher) {
+  public Quiz save(QuizAiSaveRequest input, User teacher) {
     String title = support.text(input.title(), 3, 200, "Tiêu đề quiz");
     String subject = support.text(input.subject(), 1, 100, "Môn học");
     if (input.questions() == null || input.questions().isEmpty() || input.questions().size() > 20 ||
@@ -101,7 +101,7 @@ public class QuizAiService {
         "Quiz cần 1–20 câu hỏi và thời gian 1–180 phút");
     }
     Set<String> seen = new HashSet<>();
-    for (QuestionInput question : input.questions()) {
+    for (QuestionRequest question : input.questions()) {
       if (question == null || !subject.equals(question.subject()) ||
           question.content() == null || !seen.add(normalize(question.content())) ||
           question.explanation() == null || question.explanation().isBlank() ||
@@ -112,12 +112,12 @@ public class QuizAiService {
       support.validateQuestion(question);
     }
     List<Long> ids = new ArrayList<>();
-    for (QuestionInput question : input.questions()) {
+    for (QuestionRequest question : input.questions()) {
       Question saved = (Question) questions.create(teacher, question).get("question");
       saved.aiGenerated = true;
       ids.add(saved.id);
     }
-    return quizzes.create(new QuizInput(title, subject, input.durationMinutes(), ids), teacher);
+    return quizzes.create(new QuizRequest(title, subject, input.durationMinutes(), ids), teacher);
   }
 
   private static String normalize(String value) {

@@ -5,10 +5,10 @@ import com.example.lms.entity.CourseOrder;
 import com.example.lms.entity.Enrollment;
 import com.example.lms.entity.User;
 import com.example.lms.integration.PayOSClient;
-import com.example.lms.repository.CourseOrderRepo;
-import com.example.lms.repository.CourseRepo;
-import com.example.lms.repository.EnrollmentRepo;
-import com.example.lms.util.PaymentCode;
+import com.example.lms.repository.CourseOrderRepository;
+import com.example.lms.repository.CourseRepository;
+import com.example.lms.repository.EnrollmentRepository;
+import com.example.lms.util.PaymentCodeGenerator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
@@ -35,9 +35,9 @@ public class PaymentService {
       ZoneId.of("Asia/Ho_Chi_Minh")
     );
 
-  private final CourseRepo courses;
-  private final CourseOrderRepo orders;
-  private final EnrollmentRepo enrollments;
+  private final CourseRepository courses;
+  private final CourseOrderRepository orders;
+  private final EnrollmentRepository enrollments;
   private final PayOSClient payosClient;
   private final String account;
   private final String bank;
@@ -45,9 +45,9 @@ public class PaymentService {
   private final String webhookKey;
 
   public PaymentService(
-    CourseRepo courses,
-    CourseOrderRepo orders,
-    EnrollmentRepo enrollments,
+    CourseRepository courses,
+    CourseOrderRepository orders,
+    EnrollmentRepository enrollments,
     PayOSClient payosClient,
     @Value("${app.sepay.account:}") String account,
     @Value("${app.sepay.bank:}") String bank,
@@ -98,7 +98,7 @@ public class PaymentService {
     order.originalAmount = course.price;
     order.discountAmount = BigDecimal.ZERO;
     order.amount = course.price;
-    order.paymentCode = PaymentCode.newCode();
+    order.paymentCode = PaymentCodeGenerator.newCode();
     order.expiresAt = Instant.now().plusSeconds(15 * 60);
     return view(orders.save(order));
   }
@@ -126,7 +126,7 @@ public class PaymentService {
       order.voucherCode = null;
       order.discountAmount = BigDecimal.ZERO;
       order.amount = basePrice;
-      order.paymentCode = PaymentCode.newCode();
+      order.paymentCode = PaymentCodeGenerator.newCode();
       order.expiresAt = Instant.now().plusSeconds(15 * 60);
       return view(orders.save(order));
     }
@@ -177,7 +177,7 @@ public class PaymentService {
       return view(orders.save(order));
     }
 
-    order.paymentCode = PaymentCode.newCode();
+    order.paymentCode = PaymentCodeGenerator.newCode();
     order.expiresAt = Instant.now().plusSeconds(15 * 60);
     return view(orders.save(order));
   }

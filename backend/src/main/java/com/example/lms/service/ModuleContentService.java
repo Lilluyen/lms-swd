@@ -1,11 +1,11 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.ModuleInput;
+import com.example.lms.dto.ModuleRequest;
 import com.example.lms.entity.Course;
 import com.example.lms.entity.Module;
-import com.example.lms.repository.LessonRepo;
-import com.example.lms.repository.ModuleRepo;
-import com.example.lms.web.FieldErrors;
+import com.example.lms.repository.LessonRepository;
+import com.example.lms.repository.ModuleRepository;
+import com.example.lms.web.FieldValidationException;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,13 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ModuleContentService {
 
-  private final ModuleRepo modules;
-  private final LessonRepo lessons;
+  private final ModuleRepository modules;
+  private final LessonRepository lessons;
   private final LessonContentService lessonContent;
 
   public ModuleContentService(
-    ModuleRepo modules,
-    LessonRepo lessons,
+    ModuleRepository modules,
+    LessonRepository lessons,
     LessonContentService lessonContent
   ) {
     this.modules = modules;
@@ -51,8 +51,8 @@ public class ModuleContentService {
       .toList();
   }
 
-  public Module addModule(Course c, ModuleInput input) {
-    ModuleInput clean = ContentValidation.validateModule(input);
+  public Module addModule(Course c, ModuleRequest input) {
+    ModuleRequest clean = ContentValidator.validateModule(input);
     Module m = new Module();
     m.course = c;
     m.title = clean.title();
@@ -61,8 +61,8 @@ public class ModuleContentService {
     return modules.save(m);
   }
 
-  public Module updateModule(Module m, ModuleInput input) {
-    ModuleInput clean = ContentValidation.validateModule(input);
+  public Module updateModule(Module m, ModuleRequest input) {
+    ModuleRequest clean = ContentValidator.validateModule(input);
     m.title = clean.title();
     m.description = clean.description();
     return modules.save(m);
@@ -84,7 +84,7 @@ public class ModuleContentService {
       ids.size() != existing.size() ||
       new HashSet<>(ids).size() != ids.size() ||
       !new HashSet<>(ids).equals(new HashSet<>(existing))
-    ) throw new FieldErrors(
+    ) throw new FieldValidationException(
       "order",
       "Danh sách thứ tự module không khớp với khóa học"
     );

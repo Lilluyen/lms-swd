@@ -1,15 +1,15 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.AnswerInput;
-import com.example.lms.dto.Generate;
-import com.example.lms.dto.QuestionInput;
+import com.example.lms.dto.AnswerRequest;
+import com.example.lms.dto.QuestionGenerationRequest;
+import com.example.lms.dto.QuestionRequest;
 import com.example.lms.entity.Answer;
 import com.example.lms.entity.Question;
 import com.example.lms.entity.User;
-import com.example.lms.integration.Integrations;
-import com.example.lms.repository.AnswerRepo;
-import com.example.lms.repository.QuestionRepo;
-import com.example.lms.repository.QuizQuestionRepo;
+import com.example.lms.integration.GeminiProxy;
+import com.example.lms.repository.AnswerRepository;
+import com.example.lms.repository.QuestionRepository;
+import com.example.lms.repository.QuizQuestionRepository;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -22,27 +22,27 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional
 public class QuestionService {
 
-  private final QuestionRepo questions;
-  private final AnswerRepo answers;
-  private final QuizQuestionRepo quizQuestions;
+  private final QuestionRepository questions;
+  private final AnswerRepository answers;
+  private final QuizQuestionRepository quizQuestions;
   private final SupportService support;
   private final QuestionGenerationService generation;
-  private final Integrations integrations;
+  private final GeminiProxy geminiProxy;
 
   public QuestionService(
-    QuestionRepo questions,
-    AnswerRepo answers,
-    QuizQuestionRepo quizQuestions,
+    QuestionRepository questions,
+    AnswerRepository answers,
+    QuizQuestionRepository quizQuestions,
     SupportService support,
     QuestionGenerationService generation,
-    Integrations integrations
+    GeminiProxy geminiProxy
   ) {
     this.questions = questions;
     this.answers = answers;
     this.quizQuestions = quizQuestions;
     this.support = support;
     this.generation = generation;
-    this.integrations = integrations;
+    this.geminiProxy = geminiProxy;
   }
 
   @Transactional(readOnly = true)
@@ -50,7 +50,7 @@ public class QuestionService {
     return questions.findByTeacherId(teacher.id).stream().map(this::view).toList();
   }
 
-  public Map<String, Object> create(User teacher, QuestionInput input) {
+  public Map<String, Object> create(User teacher, QuestionRequest input) {
     support.validateQuestion(input);
     Question question = new Question();
     question.teacher = teacher;
@@ -62,7 +62,7 @@ public class QuestionService {
 
   public List<Map<String, Object>> createAll(
     User teacher,
-    List<QuestionInput> inputs
+    List<QuestionRequest> inputs
   ) {
     if (inputs == null || inputs.isEmpty() || inputs.size() > 20)
       throw new ResponseStatusException(
@@ -75,7 +75,7 @@ public class QuestionService {
   public Map<String, Object> update(
     Long id,
     User teacher,
-    QuestionInput input
+    QuestionRequest input
   ) {
     Question question = owned(id, teacher);
     support.validateQuestion(input);
@@ -93,7 +93,7 @@ public class QuestionService {
     questions.delete(question);
   }
 
-  public Object generate(Generate input, User teacher) {
+  public Object generate(QuestionGenerationRequest input, User teacher) {
     return generation.generate(input, teacher);
   }
 
@@ -111,14 +111,14 @@ public class QuestionService {
     if (teacher == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
     return Map.of(
       "text",
-      integrations.generateContent(
+      geminiProxy.generateContent(
         support.text(topic, 3, 200, "Chủ đề"),
         kind == null ? "lesson" : kind
       )
     );
   }
 
-  private void apply(Question question, QuestionInput input) {
+  private void apply(Question question, QuestionRequest input) {
     question.bank = support.bank(question.teacher, input.subject());
     question.subject = input.subject();
     question.content = input.content();
@@ -139,9 +139,9 @@ public class QuestionService {
       throw new ResponseStatusException(HttpStatus.CONFLICT, message);
   }
 
-  private void replaceAnswers(Question question, List<AnswerInput> inputs) {
+  private void replaceAnswers(Question question, List<AnswerRequest> inputs) {
     answers.findByQuestionId(question.id).forEach(answers::delete);
-    for (AnswerInput input : inputs) {
+    for (AnswerRequest input : inputs) {
       Answer answer = new Answer();
       answer.question = question;
       answer.content = input.content();

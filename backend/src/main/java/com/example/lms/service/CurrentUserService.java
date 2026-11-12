@@ -1,7 +1,7 @@
 package com.example.lms.service;
 
 import com.example.lms.entity.User;
-import com.example.lms.repository.UserRepo;
+import com.example.lms.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -9,9 +9,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class CurrentUserService {
-  private final UserRepo users;
+  private final UserRepository users;
 
-  public CurrentUserService(UserRepo users) {
+  public CurrentUserService(UserRepository users) {
     this.users = users;
   }
 

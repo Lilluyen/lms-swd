@@ -1,6 +1,6 @@
 package com.example.lms.controller;
 
-import com.example.lms.dto.Submission;
+import com.example.lms.dto.QuizSubmissionRequest;
 import com.example.lms.entity.*;
 import com.example.lms.repository.*;
 import com.example.lms.service.*;
@@ -16,10 +16,10 @@ import static org.mockito.ArgumentMatchers.*;
 class QuizLiveAnswerTest {
   @Test
   void submitsFinalStudentChoicesOnlyAfterSubmission() {
-    var users = mock(UserRepo.class);
+    var users = mock(UserRepository.class);
     var service = mock(QuizService.class);
-    var api = new QuizApi(mock(CourseRepo.class), mock(QuestionRepo.class), mock(AnswerRepo.class),
-      mock(EnrollmentRepo.class), mock(CourseReviewRepo.class), mock(WishlistRepo.class),
+    var api = new QuizController(mock(CourseRepository.class), mock(QuestionRepository.class), mock(AnswerRepository.class),
+      mock(EnrollmentRepository.class), mock(CourseReviewRepository.class), mock(WishlistRepository.class),
       mock(CourseService.class), new CurrentUserService(users), service);
     var student = new User(); student.id = 1L; student.role = "STUDENT";
     when(users.findById(1L)).thenReturn(Optional.of(student));
@@ -28,8 +28,8 @@ class QuizLiveAnswerTest {
     api.start(2L, session);
     var result = new QuizResult();
     when(service.submit(eq(2L), any(), eq(student), any())).thenReturn(result);
-    assertSame(result, api.submit(2L, new Submission(Map.of(3L, 5L)), session));
-    verify(service).submit(eq(2L), eq(new Submission(Map.of(3L, 5L))), eq(student), any());
+    assertSame(result, api.submit(2L, new QuizSubmissionRequest(Map.of(3L, 5L)), session));
+    verify(service).submit(eq(2L), eq(new QuizSubmissionRequest(Map.of(3L, 5L))), eq(student), any());
     assertNull(session.getAttribute("quiz-start-2"));
     assertNull(session.getAttribute("quiz-checked-2"));
   }

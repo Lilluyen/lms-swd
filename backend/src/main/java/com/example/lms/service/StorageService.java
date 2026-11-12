@@ -1,6 +1,6 @@
 package com.example.lms.service;
 
-import com.example.lms.web.FieldErrors;
+import com.example.lms.web.FieldValidationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
@@ -60,11 +60,11 @@ public class StorageService {
   }
 
   public Map<String, Object> storeThumbnail(MultipartFile file) {
-    if (file == null || file.isEmpty()) throw new FieldErrors(
+    if (file == null || file.isEmpty()) throw new FieldValidationException(
       "cover",
       "Vui lòng chọn ảnh JPG hoặc PNG"
     );
-    if (file.getSize() > THUMBNAIL_MAX) throw new FieldErrors(
+    if (file.getSize() > THUMBNAIL_MAX) throw new FieldValidationException(
       "cover",
       "Ảnh bìa tối đa 2 MB"
     );
@@ -73,29 +73,29 @@ public class StorageService {
     if (
       !(type.equals("image/jpeg") || type.equals("image/png")) ||
       !(ext.equals("jpg") || ext.equals("jpeg") || ext.equals("png"))
-    ) throw new FieldErrors("cover", "Ảnh bìa phải là JPG hoặc PNG");
+    ) throw new FieldValidationException("cover", "Ảnh bìa phải là JPG hoặc PNG");
     try (InputStream in = file.getInputStream()) {
-      if (ImageIO.read(in) == null) throw new FieldErrors(
+      if (ImageIO.read(in) == null) throw new FieldValidationException(
         "cover",
         "Tệp không phải ảnh hợp lệ"
       );
     } catch (IOException e) {
-      throw new FieldErrors("cover", "Không đọc được ảnh bìa");
+      throw new FieldValidationException("cover", "Không đọc được ảnh bìa");
     }
     return save(file, ext);
   }
 
   public Map<String, Object> storeLessonFile(MultipartFile file) {
-    if (file == null || file.isEmpty()) throw new FieldErrors(
+    if (file == null || file.isEmpty()) throw new FieldValidationException(
       "fileUrl",
       "Vui lòng chọn tệp bài học"
     );
-    if (file.getSize() > LESSON_FILE_MAX) throw new FieldErrors(
+    if (file.getSize() > LESSON_FILE_MAX) throw new FieldValidationException(
       "fileUrl",
       "Tệp bài học tối đa 25 MB"
     );
     String ext = extension(file.getOriginalFilename());
-    if (!LESSON_EXTENSIONS.contains(ext)) throw new FieldErrors(
+    if (!LESSON_EXTENSIONS.contains(ext)) throw new FieldValidationException(
       "fileUrl",
       "Định dạng tệp không được hỗ trợ (" + ext + ")"
     );

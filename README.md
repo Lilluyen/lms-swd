@@ -190,16 +190,30 @@ Migration giữ nguyên dữ liệu cũ; lesson cũ có `video_url` được đ�
 
 Backend chia package `controller`, `dto`, `service`, `entity`, `repository`, `security`, `integration`, `util`, `web`. API quản lý nội dung nằm ở `/api/teacher/**` (kiểm tra role Teacher và quyền sở hữu ở từng thao tác), upload ở `/api/teacher/uploads`, tệp ở `/api/files/**`. SQL ở `database/init.sql`, migration ở `database/migrations`, cấu hình ở `.env.example`, frontend ở `frontend/src`.
 
+### Quy ước đặt tên backend
+
+| Vai trò | Quy ước | Ví dụ |
+|---|---|---|
+| HTTP controller | `*Controller` | `QuestionController`, `AuthController` |
+| Nghiệp vụ | `*Service` | `QuestionService`, `QuestionGenerationService` |
+| Spring Data repository | `*Repository` | `QuestionRepository`, `AnswerRepository` |
+| DTO nhận dữ liệu | `*Request` | `QuestionGenerationRequest`, `CourseRequest` |
+| DTO trả dữ liệu | `*Response` | `ProfileResponse`, `CourseChatResponse` |
+| Tích hợp Gemini | `GeminiProxy` và `GeminiApi` | proxy xử lý lời gọi AI; API giữ transport HTTP |
+| Validation và lỗi | `*Validator`, `*Exception`, `*ExceptionHandler` | `ContentValidator`, `FieldValidationException`, `GlobalExceptionHandler` |
+
+Entity dùng tên nghiệp vụ như `Course`, `Question`; dữ liệu bản nháp dùng `*Draft`. Lớp khởi tạo dùng `*Initializer`, tiện ích dùng tên mô tả như `PaymentCodeGenerator`. Tên file Java khớp với tên lớp hoặc interface bên trong.
+
 ### Cấu trúc sau refactor
 
-- `controller/`: API tách theo feature — `CourseApi` (khóa học/module/lesson/review), `QuestionApi` (ngân hàng câu hỏi + AI), `QuizApi` (quiz/kết quả), `LearningApi` (ghi danh/wishlist/tiến độ), `TeacherApi` (nội dung Teacher), `PaymentApi`, `AuthApi`; helper session/quyền sở hữu dùng chung ở `BaseController`.
-- `service/`: nội dung Teacher tách thành `CourseContentService`, `ModuleContentService`, `LessonContentService`, dùng chung `ContentAccessService` (kiểm tra sở hữu) và `ContentValidation` (validation).
-- `integration/`: `GeminiApi` giữ transport HTTP; `Integrations` giữ prompt/parse/lỗi theo từng tính năng.
+- `controller/`: API tách theo feature — `CourseController` (khóa học/module/lesson/review), `QuestionController` (ngân hàng câu hỏi + AI), `QuizController` (quiz/kết quả), `LearningController` (ghi danh/wishlist/tiến độ), `TeacherController` (nội dung Teacher), `PaymentController`, `AuthController`; helper session/quyền sở hữu dùng chung ở `BaseController`.
+- `service/`: nội dung Teacher tách thành `CourseContentService`, `ModuleContentService`, `LessonContentService`, dùng chung `ContentAccessService` (kiểm tra sở hữu) và `ContentValidator` (validation).
+- `integration/`: `GeminiApi` giữ transport HTTP; `GeminiProxy` giữ prompt/parse/lỗi theo từng tính năng.
 - `frontend/src/pages/`: mỗi nhóm màn hình là một feature component; `main.jsx` chỉ giữ state, side effect và điều hướng.
 - `frontend/src/teacher/`: mỗi màn Teacher là một feature component độc lập, màn lớn tách tiếp thành panel trình bày; `teacher.jsx` chỉ là barrel export.
 - `frontend/src/components/common.jsx`: các presentation component dùng chung như CourseGrid, PageTitle, Empty và CopyButton.
 - `frontend/src/styles/`: stylesheet chia theo layer/domain; `style.css` chỉ giữ thứ tự import để bảo toàn cascade.
-- `PaymentApi`: HTTP adapter cho checkout/order/webhook; không chứa nghiệp vụ thanh toán.
+- `PaymentController`: HTTP adapter cho checkout/order/webhook; không chứa nghiệp vụ thanh toán.
 - `PaymentService`: application service quản lý vòng đời đơn SE Pay, đối soát webhook và cấp enrollment.
 - `CurrentUserService`: một nơi duy nhất thực thi quy tắc lấy user hiện tại và kiểm tra role.
 
@@ -208,17 +222,17 @@ Backend chia package `controller`, `dto`, `service`, `entity`, `repository`, `se
 Backend — controller mỏng gọi service theo feature, transport Gemini nằm riêng:
 
 ```
-TeacherApi ─┬─> CourseContentService ─┐
-            ├─> ModuleContentService ─┼─> ContentAccessService + ContentValidation
-            └─> LessonContentService ─┘
+TeacherController ─┬─> CourseContentService ─┐
+                   ├─> ModuleContentService ─┼─> ContentAccessService + ContentValidator
+                   └─> LessonContentService ─┘
 
-CourseApi     ─> các service nội dung ở trên (khóa học, module, lesson, review)
-QuestionApi   ─> QuestionGenerationService ─> AiContentService ─> Integrations ─> GeminiApi
-QuizApi       ─> quiz / attempt / scoring / result snapshot
-LearningApi   ─> enrollment, wishlist, learning progress
-PaymentApi    ─> PaymentService ─> cấp enrollment khi đơn đã thanh toán
+CourseController   ─> các service nội dung ở trên (khóa học, module, lesson, review)
+QuestionController ─> QuestionService ─> QuestionGenerationService ─> GeminiProxy ─> GeminiApi
+QuizController     ─> quiz / attempt / scoring / result snapshot
+LearningController ─> enrollment, wishlist, learning progress
+PaymentController  ─> PaymentService ─> cấp enrollment khi đơn đã thanh toán
 
-Mọi controller feature kế thừa BaseController; CurrentUserService giữ quy tắc user/role.
+BaseController cung cấp helper session/quyền sở hữu cho các controller dùng chung; CurrentUserService giữ quy tắc user/role.
 ```
 
 Frontend — `main.jsx` giữ state và điều hướng, page chia theo feature, màn Teacher lớn tách thành container + panel:

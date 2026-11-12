@@ -2,7 +2,7 @@ package com.example.lms.service;
 
 import com.example.lms.entity.*;
 import com.example.lms.repository.*;
-import com.example.lms.integration.Integrations;
+import com.example.lms.integration.GeminiProxy;
 import java.time.Instant;
 import java.util.*;
 import org.junit.jupiter.api.Test;
@@ -13,12 +13,12 @@ import static org.mockito.Mockito.*;
 class QuizAnswerCheckTest {
   @Test
   void hidesAnswersUntilSubmissionAndRequiresActiveAttempt() {
-    var quizzes = mock(QuizRepo.class);
-    var links = mock(QuizQuestionRepo.class);
-    var answers = mock(AnswerRepo.class);
-    var service = new QuizService(quizzes, links, mock(QuizResultRepo.class),
-      mock(QuizAnswerRepo.class), mock(QuestionRepo.class), answers,
-      mock(Integrations.class), mock(SupportService.class));
+    var quizzes = mock(QuizRepository.class);
+    var links = mock(QuizQuestionRepository.class);
+    var answers = mock(AnswerRepository.class);
+    var service = new QuizService(quizzes, links, mock(QuizResultRepository.class),
+      mock(QuizAnswerRepository.class), mock(QuestionRepository.class), answers,
+      mock(GeminiProxy.class), mock(SupportService.class));
     var student = new User(); student.id = 1L; student.role = "STUDENT";
     var teacher = new User(); teacher.id = 2L; teacher.role = "TEACHER";
     var quiz = new Quiz(); quiz.id = 3L; quiz.owner = teacher; quiz.durationMinutes = 5;
@@ -30,9 +30,9 @@ class QuizAnswerCheckTest {
     when(links.findByQuizIdOrderByPosition(3L)).thenReturn(List.of(link));
     when(answers.findByQuestionId(4L)).thenReturn(List.of(right, wrong));
     assertThrows(ResponseStatusException.class, () -> service.submit(3L,
-      new com.example.lms.dto.Submission(Map.of(4L, 5L)), student, null));
+      new com.example.lms.dto.QuizSubmissionRequest(Map.of(4L, 5L)), student, null));
     assertThrows(ResponseStatusException.class, () -> service.submit(3L,
-      new com.example.lms.dto.Submission(Map.of(4L, 5L)), student, Instant.now().minusSeconds(400)));
+      new com.example.lms.dto.QuizSubmissionRequest(Map.of(4L, 5L)), student, Instant.now().minusSeconds(400)));
     // Quiz detail must never reveal correctness before submission.
     var detail = service.detail(3L, student);
     String json = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(detail.get("questions")).toString();

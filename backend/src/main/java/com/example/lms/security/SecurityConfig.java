@@ -1,7 +1,7 @@
 package com.example.lms.security;
 
 import com.example.lms.entity.User;
-import com.example.lms.repository.UserRepo;
+import com.example.lms.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,7 +46,7 @@ public class SecurityConfig {
   @Bean
   SecurityFilterChain chain(
     HttpSecurity http,
-    UserRepo users,
+    UserRepository users,
     @Value("${app.frontend}") String frontend
   ) throws Exception {
     return http

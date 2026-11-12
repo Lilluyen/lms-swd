@@ -15,22 +15,22 @@ import org.springframework.web.server.ResponseStatusException;
 public class SupportService {
 
   @Autowired
-  RoleRepo roles;
+  RoleRepository roles;
 
   @Autowired
-  CourseCategoryRepo categories;
+  CourseCategoryRepository categories;
 
   @Autowired
-  QuestionBankRepo banks;
+  QuestionBankRepository banks;
 
   @Autowired
-  LearningProgressRepo progresses;
+  LearningProgressRepository progresses;
 
   @Autowired
-  EnrollmentRepo enrollments;
+  EnrollmentRepository enrollments;
 
   @Autowired
-  LessonRepo lessons;
+  LessonRepository lessons;
 
   public String text(String s, int min, int max, String label) {
     if (
@@ -123,7 +123,7 @@ public class SupportService {
     );
   }
 
-  public void validateQuestion(QuestionInput x) {
+  public void validateQuestion(QuestionRequest x) {
     text(x.subject(), 1, 100, "Môn học");
     text(x.content(), 5, 3000, "Câu hỏi");
     if (
@@ -138,12 +138,12 @@ public class SupportService {
       x.answers() == null ||
       x.answers().size() < 2 ||
       x.answers().size() > 6 ||
-      x.answers().stream().filter(AnswerInput::correct).count() != 1
+      x.answers().stream().filter(AnswerRequest::correct).count() != 1
     ) throw new ResponseStatusException(
       HttpStatus.BAD_REQUEST,
       "Cần 2–6 đáp án và đúng một đáp án đúng"
     );
-    for (AnswerInput a : x.answers()) text(a.content(), 1, 255, "Đáp án");
+    for (AnswerRequest a : x.answers()) text(a.content(), 1, 255, "Đáp án");
   }
 
   public Object progress(User u) {

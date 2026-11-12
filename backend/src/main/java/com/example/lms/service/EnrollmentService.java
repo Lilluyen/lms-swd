@@ -8,12 +8,12 @@ import com.example.lms.entity.LearningProgress;
 import com.example.lms.entity.Lesson;
 import com.example.lms.entity.Module;
 import com.example.lms.entity.User;
-import com.example.lms.repository.CourseOrderRepo;
-import com.example.lms.repository.CourseReviewRepo;
-import com.example.lms.repository.EnrollmentRepo;
-import com.example.lms.repository.LearningProgressRepo;
-import com.example.lms.repository.LessonRepo;
-import com.example.lms.repository.ModuleRepo;
+import com.example.lms.repository.CourseOrderRepository;
+import com.example.lms.repository.CourseReviewRepository;
+import com.example.lms.repository.EnrollmentRepository;
+import com.example.lms.repository.LearningProgressRepository;
+import com.example.lms.repository.LessonRepository;
+import com.example.lms.repository.ModuleRepository;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -32,20 +32,20 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional
 public class EnrollmentService {
 
-  private final EnrollmentRepo enrollments;
-  private final ModuleRepo modules;
-  private final LessonRepo lessons;
-  private final LearningProgressRepo progresses;
-  private final CourseOrderRepo orders;
-  private final CourseReviewRepo reviews;
+  private final EnrollmentRepository enrollments;
+  private final ModuleRepository modules;
+  private final LessonRepository lessons;
+  private final LearningProgressRepository progresses;
+  private final CourseOrderRepository orders;
+  private final CourseReviewRepository reviews;
 
   public EnrollmentService(
-    EnrollmentRepo enrollments,
-    ModuleRepo modules,
-    LessonRepo lessons,
-    LearningProgressRepo progresses,
-    CourseOrderRepo orders,
-    CourseReviewRepo reviews
+    EnrollmentRepository enrollments,
+    ModuleRepository modules,
+    LessonRepository lessons,
+    LearningProgressRepository progresses,
+    CourseOrderRepository orders,
+    CourseReviewRepository reviews
   ) {
     this.enrollments = enrollments;
     this.modules = modules;

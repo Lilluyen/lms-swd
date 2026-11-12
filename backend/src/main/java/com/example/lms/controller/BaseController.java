@@ -1,16 +1,16 @@
 package com.example.lms.controller;
 
-import com.example.lms.dto.AnswerInput;
+import com.example.lms.dto.AnswerRequest;
 import com.example.lms.entity.Course;
 import com.example.lms.entity.CourseReview;
 import com.example.lms.entity.Question;
 import com.example.lms.entity.User;
-import com.example.lms.repository.AnswerRepo;
-import com.example.lms.repository.CourseRepo;
-import com.example.lms.repository.CourseReviewRepo;
-import com.example.lms.repository.EnrollmentRepo;
-import com.example.lms.repository.QuestionRepo;
-import com.example.lms.repository.WishlistRepo;
+import com.example.lms.repository.AnswerRepository;
+import com.example.lms.repository.CourseRepository;
+import com.example.lms.repository.CourseReviewRepository;
+import com.example.lms.repository.EnrollmentRepository;
+import com.example.lms.repository.QuestionRepository;
+import com.example.lms.repository.WishlistRepository;
 import com.example.lms.service.CourseService;
 import com.example.lms.service.CurrentUserService;
 import jakarta.servlet.http.HttpSession;
@@ -24,30 +24,30 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Shared controller helpers (the "BaseController" of the class diagrams).
  *
- * Feature controllers ({@link CourseApi}, {@link QuestionApi}, {@link QuizApi},
- * {@link LearningApi}) keep their own endpoints and dependencies; only the
+ * Feature controllers ({@link CourseController}, {@link QuestionController}, {@link QuizController},
+ * {@link LearningController}) keep their own endpoints and dependencies; only the
  * cross-cutting session/ownership lookups live here so a rule such as "only the
  * course owner may change it" is implemented once.
  */
 @Transactional
 public abstract class BaseController {
 
-  protected final CourseRepo courses;
-  protected final QuestionRepo questions;
-  protected final AnswerRepo answers;
-  protected final EnrollmentRepo enrollments;
-  protected final CourseReviewRepo courseReviews;
-  protected final WishlistRepo wishlists;
+  protected final CourseRepository courses;
+  protected final QuestionRepository questions;
+  protected final AnswerRepository answers;
+  protected final EnrollmentRepository enrollments;
+  protected final CourseReviewRepository courseReviews;
+  protected final WishlistRepository wishlists;
   protected final CourseService courseService;
   protected final CurrentUserService currentUser;
 
   protected BaseController(
-    CourseRepo courses,
-    QuestionRepo questions,
-    AnswerRepo answers,
-    EnrollmentRepo enrollments,
-    CourseReviewRepo courseReviews,
-    WishlistRepo wishlists,
+    CourseRepository courses,
+    QuestionRepository questions,
+    AnswerRepository answers,
+    EnrollmentRepository enrollments,
+    CourseReviewRepository courseReviews,
+    WishlistRepository wishlists,
     CourseService courseService,
     CurrentUserService currentUser
   ) {
@@ -122,11 +122,11 @@ public abstract class BaseController {
     );
   }
 
-  protected void saveAnswers(Question question, List<AnswerInput> inputs) {
+  protected void saveAnswers(Question question, List<AnswerRequest> inputs) {
     if (
       inputs == null ||
       inputs.size() < 2 ||
-      inputs.stream().filter(AnswerInput::correct).count() != 1
+      inputs.stream().filter(AnswerRequest::correct).count() != 1
     ) throw new ResponseStatusException(
       HttpStatus.BAD_REQUEST,
       "Exactly one correct answer is required"
@@ -134,7 +134,7 @@ public abstract class BaseController {
     for (var answer : answers.findByQuestionId(question.id)) answers.delete(
       answer
     );
-    for (AnswerInput input : inputs) {
+    for (AnswerRequest input : inputs) {
       var answer = new com.example.lms.entity.Answer();
       answer.question = question;
       answer.content = input.content();

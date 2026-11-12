@@ -1,10 +1,10 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.Generate;
+import com.example.lms.dto.QuestionGenerationRequest;
 import com.example.lms.entity.Lesson;
 import com.example.lms.entity.User;
-import com.example.lms.integration.Integrations;
-import com.example.lms.web.FieldErrors;
+import com.example.lms.integration.GeminiProxy;
+import com.example.lms.web.FieldValidationException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
@@ -20,19 +20,19 @@ public class QuestionGenerationService {
   private static final List<String> LANGUAGES = List.of("ENGLISH", "VIETNAMESE");
   /** Gemini sometimes answers with an empty string; ask it again a few times. */
   private static final int GENERATE_ATTEMPTS = 3;
-  private final Integrations integrations;
+  private final GeminiProxy geminiProxy;
   private final ContentAccessService content;
   private final ObjectMapper mapper = new ObjectMapper();
 
   public QuestionGenerationService(
-    Integrations integrations,
+    GeminiProxy geminiProxy,
     ContentAccessService content
   ) {
-    this.integrations = integrations;
+    this.geminiProxy = geminiProxy;
     this.content = content;
   }
 
-  public List<Map<String, Object>> generate(Generate input, User teacher) {
+  public List<Map<String, Object>> generate(QuestionGenerationRequest input, User teacher) {
     String subject = trim(input.subject());
     String topic = trim(input.topic());
     String difficulty = upper(input.difficulty(), "MEDIUM");
@@ -44,7 +44,7 @@ public class QuestionGenerationService {
     Lesson selected = null;
     if (input.lessonId() != null) {
       selected = content.ownedLesson(input.lessonId(), teacher);
-      if (!"TEXT".equals(selected.contentType)) throw new FieldErrors(
+      if (!"TEXT".equals(selected.contentType)) throw new FieldValidationException(
         "lessonId",
         "Chỉ có thể lấy nội dung tự động từ bài học dạng Text. Hãy dán transcript hoặc nội dung tệp vào ô ngữ cảnh."
       );
@@ -61,7 +61,7 @@ public class QuestionGenerationService {
     if (instructions.length() > 1000) errors.put("instructions", "Yêu cầu bổ sung tối đa 1.000 ký tự");
     if (reference.isBlank()) errors.put("context", "Hãy cung cấp nội dung bài học để AI giới hạn phạm vi kiến thức");
     else if (reference.length() > 20000) errors.put("context", "Nội dung bài học tối đa 20.000 ký tự");
-    if (!errors.isEmpty()) throw new FieldErrors(errors);
+    if (!errors.isEmpty()) throw new FieldValidationException(errors);
 
     String prompt = prompt(subject, topic, difficulty, input.quantity(), language, instructions, reference);
     String raw = generateAnswer(prompt, Math.min(8192, 900 + input.quantity() * 520));
@@ -88,8 +88,8 @@ public class QuestionGenerationService {
   private String generateAnswer(String prompt, int maxOutputTokens) {
     for (int attempt = 1; ; attempt++) {
       try {
-        return integrations.generateText(prompt, maxOutputTokens);
-      } catch (Integrations.EmptyAnswerException e) {
+        return geminiProxy.generateText(prompt, maxOutputTokens);
+      } catch (GeminiProxy.EmptyAnswerException e) {
         if (attempt >= GENERATE_ATTEMPTS) throw e;
       }
     }

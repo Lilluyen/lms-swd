@@ -4,9 +4,9 @@ import com.example.lms.entity.Course;
 import com.example.lms.entity.Lesson;
 import com.example.lms.entity.Module;
 import com.example.lms.entity.User;
-import com.example.lms.repository.CourseRepo;
-import com.example.lms.repository.LessonRepo;
-import com.example.lms.repository.ModuleRepo;
+import com.example.lms.repository.CourseRepository;
+import com.example.lms.repository.LessonRepository;
+import com.example.lms.repository.ModuleRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,14 +20,14 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional(readOnly = true)
 public class ContentAccessService {
 
-  private final CourseRepo courses;
-  private final ModuleRepo modules;
-  private final LessonRepo lessons;
+  private final CourseRepository courses;
+  private final ModuleRepository modules;
+  private final LessonRepository lessons;
 
   public ContentAccessService(
-    CourseRepo courses,
-    ModuleRepo modules,
-    LessonRepo lessons
+    CourseRepository courses,
+    ModuleRepository modules,
+    LessonRepository lessons
   ) {
     this.courses = courses;
     this.modules = modules;

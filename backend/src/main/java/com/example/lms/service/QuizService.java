@@ -1,8 +1,8 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.Generate;
-import com.example.lms.dto.QuizInput;
-import com.example.lms.dto.Submission;
+import com.example.lms.dto.QuestionGenerationRequest;
+import com.example.lms.dto.QuizRequest;
+import com.example.lms.dto.QuizSubmissionRequest;
 import com.example.lms.entity.Answer;
 import com.example.lms.entity.Question;
 import com.example.lms.entity.Quiz;
@@ -10,13 +10,13 @@ import com.example.lms.entity.QuizAnswer;
 import com.example.lms.entity.QuizQuestion;
 import com.example.lms.entity.QuizResult;
 import com.example.lms.entity.User;
-import com.example.lms.integration.Integrations;
-import com.example.lms.repository.AnswerRepo;
-import com.example.lms.repository.QuestionRepo;
-import com.example.lms.repository.QuizAnswerRepo;
-import com.example.lms.repository.QuizQuestionRepo;
-import com.example.lms.repository.QuizRepo;
-import com.example.lms.repository.QuizResultRepo;
+import com.example.lms.integration.GeminiProxy;
+import com.example.lms.repository.AnswerRepository;
+import com.example.lms.repository.QuestionRepository;
+import com.example.lms.repository.QuizAnswerRepository;
+import com.example.lms.repository.QuizQuestionRepository;
+import com.example.lms.repository.QuizRepository;
+import com.example.lms.repository.QuizResultRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,23 +36,23 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional
 public class QuizService {
 
-  private final QuizRepo quizzes;
-  private final QuizQuestionRepo quizQuestions;
-  private final QuizResultRepo results;
-  private final QuizAnswerRepo quizAnswers;
-  private final QuestionRepo questions;
-  private final AnswerRepo answers;
-  private final Integrations integrations;
+  private final QuizRepository quizzes;
+  private final QuizQuestionRepository quizQuestions;
+  private final QuizResultRepository results;
+  private final QuizAnswerRepository quizAnswers;
+  private final QuestionRepository questions;
+  private final AnswerRepository answers;
+  private final GeminiProxy geminiProxy;
   private final SupportService support;
 
   public QuizService(
-    QuizRepo quizzes,
-    QuizQuestionRepo quizQuestions,
-    QuizResultRepo results,
-    QuizAnswerRepo quizAnswers,
-    QuestionRepo questions,
-    AnswerRepo answers,
-    Integrations integrations,
+    QuizRepository quizzes,
+    QuizQuestionRepository quizQuestions,
+    QuizResultRepository results,
+    QuizAnswerRepository quizAnswers,
+    QuestionRepository questions,
+    AnswerRepository answers,
+    GeminiProxy geminiProxy,
     SupportService support
   ) {
     this.quizzes = quizzes;
@@ -61,11 +61,11 @@ public class QuizService {
     this.quizAnswers = quizAnswers;
     this.questions = questions;
     this.answers = answers;
-    this.integrations = integrations;
+    this.geminiProxy = geminiProxy;
     this.support = support;
   }
 
-  public Quiz create(QuizInput input, User teacher) {
+  public Quiz create(QuizRequest input, User teacher) {
     validate(input, teacher);
     Quiz quiz = new Quiz();
     apply(quiz, input, teacher);
@@ -74,7 +74,7 @@ public class QuizService {
     return quiz;
   }
 
-  public Quiz update(Long id, QuizInput input, User teacher) {
+  public Quiz update(Long id, QuizRequest input, User teacher) {
     Quiz quiz = ownedBy(id, teacher);
     requireNoAttempts(id, "Quiz đã có lượt làm. Hãy tạo quiz mới để bảo toàn kết quả.");
     validate(input, teacher);
@@ -90,8 +90,8 @@ public class QuizService {
     quizzes.delete(quiz);
   }
 
-  public Quiz generatePractice(Generate input, User student) {
-    List<Map<String, Object>> drafts = integrations.generateParsed(
+  public Quiz generatePractice(QuestionGenerationRequest input, User student) {
+    List<Map<String, Object>> drafts = geminiProxy.generateParsed(
       input.subject(),
       input.topic(),
       input.difficulty(),
@@ -142,7 +142,7 @@ public class QuizService {
 
   public QuizResult submit(
     Long id,
-    Submission submission,
+    QuizSubmissionRequest submission,
     User student,
     Instant startedAt
   ) {
@@ -209,7 +209,7 @@ public class QuizService {
     return Map.of("result", result, "answers", answerViews);
   }
 
-  private void validate(QuizInput input, User teacher) {
+  private void validate(QuizRequest input, User teacher) {
     support.text(input.title(), 3, 200, "Tiêu đề quiz");
     if (
       input.durationMinutes() < 1 ||
@@ -224,7 +224,7 @@ public class QuizService {
     input.questionIds().forEach(questionId -> ownedQuestion(questionId, teacher));
   }
 
-  private void apply(Quiz quiz, QuizInput input, User owner) {
+  private void apply(Quiz quiz, QuizRequest input, User owner) {
     quiz.title = input.title().trim();
     quiz.subject = input.subject();
     quiz.durationMinutes = input.durationMinutes();
@@ -247,7 +247,7 @@ public class QuizService {
 
   private Question generatedQuestion(
     Map<String, Object> raw,
-    Generate input,
+    QuestionGenerationRequest input,
     User student
   ) {
     Question question = new Question();

@@ -2,7 +2,7 @@ package com.example.lms.service;
 
 import com.example.lms.entity.Course;
 import com.example.lms.entity.User;
-import com.example.lms.repository.CourseRepo;
+import com.example.lms.repository.CourseRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -10,9 +10,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class CourseService {
 
-  private final CourseRepo courses;
+  private final CourseRepository courses;
 
-  public CourseService(CourseRepo courses) {
+  public CourseService(CourseRepository courses) {
     this.courses = courses;
   }
 

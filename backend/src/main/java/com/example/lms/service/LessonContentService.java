@@ -1,12 +1,12 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.LessonInput;
+import com.example.lms.dto.LessonRequest;
 import com.example.lms.entity.Lesson;
 import com.example.lms.entity.Module;
-import com.example.lms.repository.LearningMaterialRepo;
-import com.example.lms.repository.LearningProgressRepo;
-import com.example.lms.repository.LessonRepo;
-import com.example.lms.web.FieldErrors;
+import com.example.lms.repository.LearningMaterialRepository;
+import com.example.lms.repository.LearningProgressRepository;
+import com.example.lms.repository.LessonRepository;
+import com.example.lms.web.FieldValidationException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,15 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class LessonContentService {
 
-  private final LessonRepo lessons;
-  private final LearningProgressRepo progresses;
-  private final LearningMaterialRepo materials;
+  private final LessonRepository lessons;
+  private final LearningProgressRepository progresses;
+  private final LearningMaterialRepository materials;
   private final ContentAccessService access;
 
   public LessonContentService(
-    LessonRepo lessons,
-    LearningProgressRepo progresses,
-    LearningMaterialRepo materials,
+    LessonRepository lessons,
+    LearningProgressRepository progresses,
+    LearningMaterialRepository materials,
     ContentAccessService access
   ) {
     this.lessons = lessons;
@@ -60,10 +60,10 @@ public class LessonContentService {
       .toList();
   }
 
-  public Lesson addLesson(Module m, LessonInput input) {
-    LessonInput clean = ContentValidation.validateLesson(input);
+  public Lesson addLesson(Module m, LessonRequest input) {
+    LessonRequest clean = ContentValidator.validateLesson(input);
     if (clean.fileUrl() == null && "FILE".equals(clean.contentType()))
-      throw new FieldErrors("fileUrl", "Vui lòng tải lên tệp bài học");
+      throw new FieldValidationException("fileUrl", "Vui lòng tải lên tệp bài học");
     Lesson l = new Lesson();
     l.module = m;
     l.title = clean.title();
@@ -80,12 +80,12 @@ public class LessonContentService {
     return l;
   }
 
-  public Lesson updateLesson(Lesson l, LessonInput input) {
-    LessonInput clean = ContentValidation.validateLesson(input);
+  public Lesson updateLesson(Lesson l, LessonRequest input) {
+    LessonRequest clean = ContentValidator.validateLesson(input);
     Module target = l.module;
     if (clean.moduleId() != null && !clean.moduleId().equals(l.module.id)) {
       target = access.ownedModule(clean.moduleId(), l.module.course.teacher);
-      if (!target.course.id.equals(l.module.course.id)) throw new FieldErrors(
+      if (!target.course.id.equals(l.module.course.id)) throw new FieldValidationException(
         "moduleId",
         "Chỉ có thể chuyển bài học trong cùng khóa học"
       );
@@ -94,7 +94,7 @@ public class LessonContentService {
       "FILE".equals(clean.contentType()) &&
       clean.fileUrl() == null &&
       l.fileUrl == null
-    ) throw new FieldErrors("fileUrl", "Vui lòng tải lên tệp bài học");
+    ) throw new FieldValidationException("fileUrl", "Vui lòng tải lên tệp bài học");
     Long previousModule = l.module.id;
     l.title = clean.title();
     l.contentType = clean.contentType();

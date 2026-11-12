@@ -1,8 +1,8 @@
 package com.example.lms.service;
 
 import com.example.lms.entity.*;
-import com.example.lms.integration.Integrations;
-import com.example.lms.repository.QuizResultRepo;
+import com.example.lms.integration.GeminiProxy;
+import com.example.lms.repository.QuizResultRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import org.junit.jupiter.api.Test;
@@ -16,8 +16,8 @@ class QuizFeedbackServiceTest {
   @Test
   void analyzesSavedEvidenceAndReusesCachedFeedback() {
     var quizzes = mock(QuizService.class);
-    var results = mock(QuizResultRepo.class);
-    var ai = mock(Integrations.class);
+    var results = mock(QuizResultRepository.class);
+    var ai = mock(GeminiProxy.class);
     var service = new QuizFeedbackService(quizzes, results, ai, new ObjectMapper());
     var student = new User();
     var result = new QuizResult();
@@ -39,8 +39,8 @@ class QuizFeedbackServiceTest {
   @Test
   void deniesOtherStudentsBeforeReadingCachedFeedback() {
     var quizzes = mock(QuizService.class);
-    var results = mock(QuizResultRepo.class);
-    var ai = mock(Integrations.class);
+    var results = mock(QuizResultRepository.class);
+    var ai = mock(GeminiProxy.class);
     var student = new User();
     when(quizzes.result(1L, student)).thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN));
     var service = new QuizFeedbackService(quizzes, results, ai, new ObjectMapper());

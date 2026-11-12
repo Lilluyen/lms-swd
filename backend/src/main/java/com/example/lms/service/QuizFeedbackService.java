@@ -1,8 +1,8 @@
 package com.example.lms.service;
 
 import com.example.lms.entity.User;
-import com.example.lms.repository.QuizResultRepo;
-import com.example.lms.integration.Integrations;
+import com.example.lms.repository.QuizResultRepository;
+import com.example.lms.integration.GeminiProxy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -11,11 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class QuizFeedbackService {
   private final QuizService quizzes;
-  private final QuizResultRepo results;
-  private final Integrations ai;
+  private final QuizResultRepository results;
+  private final GeminiProxy ai;
   private final ObjectMapper mapper;
 
-  public QuizFeedbackService(QuizService quizzes, QuizResultRepo results, Integrations ai, ObjectMapper mapper) {
+  public QuizFeedbackService(QuizService quizzes, QuizResultRepository results, GeminiProxy ai, ObjectMapper mapper) {
     this.quizzes = quizzes;
     this.results = results;
     this.ai = ai;

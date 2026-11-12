@@ -1,18 +1,18 @@
 package com.example.lms.service;
 
-import com.example.lms.dto.CourseInput;
+import com.example.lms.dto.CourseRequest;
 import com.example.lms.entity.Course;
 import com.example.lms.entity.Module;
 import com.example.lms.entity.User;
-import com.example.lms.repository.CourseOrderRepo;
-import com.example.lms.repository.CourseRepo;
-import com.example.lms.repository.CourseReviewRepo;
-import com.example.lms.repository.EnrollmentRepo;
-import com.example.lms.repository.LearningProgressRepo;
-import com.example.lms.repository.LessonRepo;
-import com.example.lms.repository.ModuleRepo;
-import com.example.lms.repository.WishlistRepo;
-import com.example.lms.web.FieldErrors;
+import com.example.lms.repository.CourseOrderRepository;
+import com.example.lms.repository.CourseRepository;
+import com.example.lms.repository.CourseReviewRepository;
+import com.example.lms.repository.EnrollmentRepository;
+import com.example.lms.repository.LearningProgressRepository;
+import com.example.lms.repository.LessonRepository;
+import com.example.lms.repository.ModuleRepository;
+import com.example.lms.repository.WishlistRepository;
+import com.example.lms.web.FieldValidationException;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,26 +34,26 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional
 public class CourseContentService {
 
-  private final CourseRepo courses;
-  private final ModuleRepo modules;
-  private final LessonRepo lessons;
-  private final EnrollmentRepo enrollments;
-  private final CourseOrderRepo orders;
-  private final LearningProgressRepo progresses;
-  private final CourseReviewRepo reviews;
-  private final WishlistRepo wishlists;
+  private final CourseRepository courses;
+  private final ModuleRepository modules;
+  private final LessonRepository lessons;
+  private final EnrollmentRepository enrollments;
+  private final CourseOrderRepository orders;
+  private final LearningProgressRepository progresses;
+  private final CourseReviewRepository reviews;
+  private final WishlistRepository wishlists;
   private final ModuleContentService moduleContent;
   private final LessonContentService lessonContent;
 
   public CourseContentService(
-    CourseRepo courses,
-    ModuleRepo modules,
-    LessonRepo lessons,
-    EnrollmentRepo enrollments,
-    CourseOrderRepo orders,
-    LearningProgressRepo progresses,
-    CourseReviewRepo reviews,
-    WishlistRepo wishlists,
+    CourseRepository courses,
+    ModuleRepository modules,
+    LessonRepository lessons,
+    EnrollmentRepository enrollments,
+    CourseOrderRepository orders,
+    LearningProgressRepository progresses,
+    CourseReviewRepository reviews,
+    WishlistRepository wishlists,
     ModuleContentService moduleContent,
     LessonContentService lessonContent
   ) {
@@ -76,15 +76,15 @@ public class CourseContentService {
     int page,
     int size
   ) {
-    String keyword = ContentValidation.trim(q).toLowerCase();
-    if (keyword.length() > 100) throw new FieldErrors(
+    String keyword = ContentValidator.trim(q).toLowerCase();
+    if (keyword.length() > 100) throw new FieldValidationException(
       "q",
       "Từ khóa tìm kiếm tối đa 100 ký tự"
     );
     Boolean published = null;
     if (status != null && !status.isBlank() && !status.equalsIgnoreCase("ALL")) {
       String s = status.toUpperCase();
-      if (!ContentValidation.STATUSES.contains(s)) throw new FieldErrors(
+      if (!ContentValidator.STATUSES.contains(s)) throw new FieldValidationException(
         "status",
         "Trạng thái không hợp lệ"
       );
@@ -168,8 +168,8 @@ public class CourseContentService {
     return m;
   }
 
-  public Course create(User teacher, CourseInput input) {
-    CourseInput clean = ContentValidation.validateCourse(input);
+  public Course create(User teacher, CourseRequest input) {
+    CourseRequest clean = ContentValidator.validateCourse(input);
     Course c = new Course();
     c.teacher = teacher;
     apply(c, clean);
@@ -177,14 +177,14 @@ public class CourseContentService {
     return courses.save(c);
   }
 
-  public Course update(Course c, CourseInput input) {
-    CourseInput clean = ContentValidation.validateCourse(input);
+  public Course update(Course c, CourseRequest input) {
+    CourseRequest clean = ContentValidator.validateCourse(input);
     apply(c, clean);
     c.updatedAt = Instant.now();
     return courses.save(c);
   }
 
-  private void apply(Course c, CourseInput clean) {
+  private void apply(Course c, CourseRequest clean) {
     c.title = clean.title();
     c.description = clean.description();
     c.level = clean.level();

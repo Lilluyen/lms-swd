@@ -7,10 +7,10 @@ CodeGraph provides reusable structural context for future coding sessions: files
 ## Current index
 
 - CodeGraph CLI: `3.1.1`
-- Files indexed: `162` (backend Java + tests, frontend `src`, database SQL/migrations, scripts, root docs/config)
+- Files indexed: `161` (backend Java + tests, frontend `src`, database SQL/migrations, scripts, root docs/config)
 - Analysis: native semantic, backend `native`, 0 degraded files
 - Dependency cycles reported by orientation: `0`
-- Latest indexed commit: `f524aa1` (`change name copilot ai to gemini ai`)
+- Git baseline: `3b32a62` (`Add replace-or-append AI lesson generation`); index includes the working-tree backend naming refactor.
 
 The cache automatically validates freshness. Run this after pulling or making a large refactor:
 
@@ -51,39 +51,39 @@ codegraph review --base HEAD --head WORKTREE
 ### Backend HTTP → service → integration
 
 ```
-TeacherApi ─┬─> CourseContentService ─┬─> ContentAccessService
-            ├─> ModuleContentService ─┤
-            └─> LessonContentService ─┴─> ContentValidation
+TeacherController ─┬─> CourseContentService ─┬─> ContentAccessService
+                   ├─> ModuleContentService ─┤
+                   └─> LessonContentService ─┴─> ContentValidator
 
-CourseApi   ─┬─> CourseContentService / ModuleContentService / LessonContentService
-             └─> CourseService (catalogue, reviews, ownership)
-QuestionApi ─> QuestionService ─> QuestionGenerationService ─> Integrations ─> GeminiApi
-QuizApi     ─> QuizService (management, attempts, scoring, result snapshots)
-QuizAiApi   ─> QuizAiService ─> Integrations + QuestionService + QuizService
-QuizFeedbackApi ─> QuizFeedbackService ─> Integrations + QuizService (stored aiFeedback)
-LearningApi ─> EnrollmentService, wishlist, progress (no Teacher content dependency)
-PaymentApi  ─> PaymentService ─> PayOSClient (SE Pay checkout/webhook) + enrollment on paid order
-AuthApi / FilesApi / Errors: auth, uploads/downloads, error mapping
+CourseController ─┬─> CourseContentService / ModuleContentService / LessonContentService
+                  └─> CourseService (catalogue, reviews, ownership)
+QuestionController ─> QuestionService ─> QuestionGenerationService ─> GeminiProxy ─> GeminiApi
+QuizController     ─> QuizService (management, attempts, scoring, result snapshots)
+QuizAiController   ─> QuizAiService ─> GeminiProxy + QuestionService + QuizService
+QuizFeedbackController ─> QuizFeedbackService ─> GeminiProxy + QuizService (stored aiFeedback)
+LearningController ─> EnrollmentService, wishlist, progress (no Teacher content dependency)
+PaymentController  ─> PaymentService ─> PayOSClient (SE Pay checkout/webhook) + enrollment on paid order
+AuthController / FilesController / GlobalExceptionHandler: auth, uploads/downloads, error mapping
 
-All feature controllers extend BaseController (session, role, ownership helpers).
+BaseController provides session, role and ownership helpers for controllers that share them.
 CurrentUserService is the single source for "who is logged in"; SupportService holds shared validation/text helpers.
 ```
 
 | Controller | Service(s) | Responsibility |
 |---|---|---|
 | `BaseController` | `CurrentUserService` | shared `me/student/teacher`, `owned*` guards, view mappers |
-| `CourseApi` | `CourseContentService`, `ModuleContentService`, `LessonContentService`, `CourseService` | catalogue, course CRUD, modules, lessons, reviews |
-| `QuestionApi` | `QuestionService`, `QuestionGenerationService` | thin HTTP boundary for question bank, bulk save and AI drafts |
-| `QuizApi` | `QuizService` | thin HTTP boundary for quiz CRUD, attempts, scoring and results |
-| `QuizAiApi` | `QuizAiService` | AI quiz drafts and saving an approved AI quiz |
-| `QuizFeedbackApi` | `QuizFeedbackService` | AI analysis of a submitted attempt, cached per result |
-| `LearningApi` | `EnrollmentService`, progress services | enrollments, wishlist, lesson progress |
-| `TeacherApi` | content services above, `StorageService` | `/api/teacher/**` content management + uploads |
-| `PaymentApi` | `PaymentService` | SE Pay checkout, order lookup, webhook |
-| `AuthApi` | `CurrentUserService` | email/password, Google login, profile |
-| `FilesApi` | `StorageService` | served uploads for signed-in users |
+| `CourseController` | `CourseContentService`, `ModuleContentService`, `LessonContentService`, `CourseService` | catalogue, course CRUD, modules, lessons, reviews |
+| `QuestionController` | `QuestionService` (delegates AI drafts to `QuestionGenerationService`) | thin HTTP boundary for question bank, bulk save and AI drafts |
+| `QuizController` | `QuizService` | thin HTTP boundary for quiz CRUD, attempts, scoring and results |
+| `QuizAiController` | `QuizAiService` | AI quiz drafts and saving an approved AI quiz |
+| `QuizFeedbackController` | `QuizFeedbackService` | AI analysis of a submitted attempt, cached per result |
+| `LearningController` | `EnrollmentService`, progress services | enrollments, wishlist, lesson progress |
+| `TeacherController` | content services above, `StorageService` | `/api/teacher/**` content management + uploads |
+| `PaymentController` | `PaymentService` | SE Pay checkout, order lookup, webhook |
+| `AuthController` | `CurrentUserService` | email/password, Google login, profile |
+| `FilesController` | `StorageService` | served uploads for signed-in users |
 
-`GeminiApi` owns transport (HTTP, key, model fallback list, response extraction); `Integrations` owns prompts, parsing and domain error mapping, so feature services never build URLs. `GeminiApi.post` tries the primary model then each `GEMINI_FALLBACK_MODELS` entry when a model is unknown, rate limited, fails with 4xx/5xx worth retrying, or answers empty; auth/bad-request errors fail fast. `Integrations.generateText` raises `EmptyAnswerException` on an empty answer, and `QuestionGenerationService` alone retries that case (3 attempts) while non-empty drafts that fail context checks are never retried.
+`GeminiApi` owns transport (HTTP, key, model fallback list, response extraction); `GeminiProxy` owns prompts, parsing and domain error mapping, so feature services never build URLs. `GeminiApi.post` tries the primary model then each `GEMINI_FALLBACK_MODELS` entry when a model is unknown, rate limited, fails with 4xx/5xx worth retrying, or answers empty; auth/bad-request errors fail fast. `GeminiProxy.generateText` raises `EmptyAnswerException` on an empty answer, and `QuestionGenerationService` alone retries that case (3 attempts) while non-empty drafts that fail context checks are never retried.
 
 ### Frontend shell → pages → teacher components
 
@@ -118,20 +118,20 @@ Leaf modules carry no page state: `teacher/shared.jsx` (constants, `Field`, `Cru
 ## Architecture anchors from the graph
 
 - `BaseController.java`: shared session/ownership helpers for the feature controllers.
-- `QuestionService.java`, `QuizService.java`, `QuizAiService.java`, `QuizFeedbackService.java`: question/quiz feature boundaries; Spring Data `*Repo` interfaces implement the diagram's DAO responsibilities.
-- `CourseApi.java`, `QuestionApi.java`, `QuizApi.java`, `LearningApi.java`: public/authenticated API split by feature (courses, question bank, quizzes, enrollments/progress).
+- `QuestionService.java`, `QuizService.java`, `QuizAiService.java`, `QuizFeedbackService.java`: question/quiz feature boundaries; Spring Data `*Repository` interfaces implement the diagram's DAO responsibilities.
+- `CourseController.java`, `QuestionController.java`, `QuizController.java`, `LearningController.java`: public/authenticated API split by feature (courses, question bank, quizzes, enrollments/progress).
 - `QuestionGenerationService.java`: grounded question drafts for the AI studio; one retry budget for empty Gemini answers (`GENERATE_ATTEMPTS = 3`), no retry when the answer is non-empty but lacks context support.
-- `TeacherApi.java` → `CourseContentService.java`, `ModuleContentService.java`, `LessonContentService.java`: Teacher Course–Module–Lesson HTTP and business flow, sharing `ContentAccessService` and `ContentValidation`.
-- `GeminiApi.java` (transport) → `Integrations.java` (prompts, parsing, error mapping).
-- `PaymentApi.java` → `PaymentService.java` → `PayOSClient.java`: SE Pay checkout, order lifecycle, reconciliation and enrollment; `EnrollmentService.java` owns enrollment rules for `LearningApi`.
+- `TeacherController.java` → `CourseContentService.java`, `ModuleContentService.java`, `LessonContentService.java`: Teacher Course–Module–Lesson HTTP and business flow, sharing `ContentAccessService` and `ContentValidator`.
+- `GeminiApi.java` (transport) → `GeminiProxy.java` (prompts, parsing, error mapping).
+- `PaymentController.java` → `PaymentService.java` → `PayOSClient.java`: SE Pay checkout, order lifecycle, reconciliation and enrollment; `EnrollmentService.java` owns enrollment rules for `LearningController`.
 - `CurrentUserService.java`: shared authenticated-user and role boundary.
 - `SupportService.java`: shared text/validation helpers (top fan-out in the graph).
-- `AiContentService.java`, `QuestionGenerationService.java`: grounded generation on top of `Integrations`.
+- `AiContentService.java`, `QuestionGenerationService.java`: grounded generation on top of `GeminiProxy`.
 - `frontend/src/main.jsx`: application state, side effects and routing; page UI lives in `frontend/src/pages/` by feature.
 - `frontend/src/teacher.jsx`: barrel export for feature components in `frontend/src/teacher/`.
 - `frontend/src/style.css`: ordered style-layer imports from `frontend/src/styles/`.
 - `scripts/regression_test.py`, `content_test.py`, `ui_test.py`, `ui_student_test.py`, `ai_test.py`, `smoke_test.py`: executable behavior checks.
-- Tests: `backend/src/test/java/.../controller` (`QuizLiveAnswerTest`, `QuizAiApiTest`) and `service` (`QuizAiServiceTest`, `QuizAnswerCheckTest`, `QuizFeedbackServiceTest`).
+- Tests: `backend/src/test/java/.../controller` (`QuizLiveAnswerTest`, `QuizAiControllerTest`) and `service` (`QuizAiServiceTest`, `QuizAnswerCheckTest`, `QuizFeedbackServiceTest`).
 - Migrations: `2026-10-30_course_content.sql`, `2026-10-31_sepay_reviews.sql`, `2026-11-08_quiz_ai_feedback.sql`.
 
 ## Maintenance policy

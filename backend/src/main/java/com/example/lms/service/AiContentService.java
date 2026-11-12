@@ -5,8 +5,8 @@ import com.example.lms.entity.Course;
 import com.example.lms.entity.Lesson;
 import com.example.lms.entity.Module;
 import com.example.lms.entity.User;
-import com.example.lms.integration.Integrations;
-import com.example.lms.web.FieldErrors;
+import com.example.lms.integration.GeminiProxy;
+import com.example.lms.web.FieldValidationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -38,7 +38,7 @@ public class AiContentService {
   /** Per-generation reference material can contain a full lesson or notes. */
   static final int CONTEXT_MAX = 20000;
 
-  private final Integrations integrations;
+  private final GeminiProxy geminiProxy;
   private final ContentAccessService content;
   private final CourseContentService courseContent;
   private final ModuleContentService moduleContent;
@@ -46,14 +46,14 @@ public class AiContentService {
   private final ObjectMapper objectMapper;
 
   public AiContentService(
-    Integrations integrations,
+    GeminiProxy geminiProxy,
     ContentAccessService content,
     CourseContentService courseContent,
     ModuleContentService moduleContent,
     LessonContentService lessonContent,
     ObjectMapper objectMapper
   ) {
-    this.integrations = integrations;
+    this.geminiProxy = geminiProxy;
     this.content = content;
     this.courseContent = courseContent;
     this.moduleContent = moduleContent;
@@ -105,7 +105,7 @@ public class AiContentService {
       "language",
       "Ngôn ngữ không hợp lệ"
     );
-    if (!errors.isEmpty()) throw new FieldErrors(errors);
+    if (!errors.isEmpty()) throw new FieldValidationException(errors);
 
     int max = type.equals(COURSE) ? 2000 : type.equals(MODULE) ? 500 : 10000;
     String scope = scope(course, lesson);
@@ -119,12 +119,12 @@ public class AiContentService {
       language,
       max
     );
-    String raw = integrations.generateText(
+    String raw = geminiProxy.generateText(
       prompt,
       type.equals(COURSE) ? 1600 : type.equals(MODULE) ? 600 : 4096
     );
     String text = clean(raw);
-    if (text.length() < 10) throw new FieldErrors(
+    if (text.length() < 10) throw new FieldValidationException(
       "topic",
       "AI trả về nội dung quá ngắn. Hãy bổ sung ngữ cảnh và tạo lại."
     );
@@ -155,11 +155,11 @@ public class AiContentService {
    */
   public CourseChatResponse chatCourse(CourseChatRequest request, User teacher) {
     if (request == null || request.message() == null || request.message().trim().isBlank()) {
-      throw new FieldErrors("message", "Nội dung tin nhắn không được để trống");
+      throw new FieldValidationException("message", "Nội dung tin nhắn không được để trống");
     }
     String message = request.message().trim();
     String prompt = buildCourseChatPrompt(message, request.history(), request.currentDraft());
-    String raw = integrations.generateText(prompt, 3500);
+    String raw = geminiProxy.generateText(prompt, 3500);
 
     Pattern pattern = Pattern.compile("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```");
     Matcher matcher = pattern.matcher(raw);
@@ -190,7 +190,7 @@ public class AiContentService {
    */
   public Map<String, Object> createCourseFromDraft(CourseDraft draft, User teacher) {
     if (draft == null || draft.title() == null || draft.title().trim().length() < 3) {
-      throw new FieldErrors("title", "Tên khóa học phải từ 5 đến 100 ký tự");
+      throw new FieldValidationException("title", "Tên khóa học phải từ 5 đến 100 ký tự");
     }
     String title = draft.title().trim();
     if (title.length() < 5) title = title + " Khóa học";
@@ -214,7 +214,7 @@ public class AiContentService {
     String context = draft.context() != null ? draft.context().trim() : "";
     if (context.length() > 2000) context = context.substring(0, 2000);
 
-    CourseInput courseInput = new CourseInput(
+    CourseRequest courseInput = new CourseRequest(
       title,
       desc,
       level,
@@ -238,7 +238,7 @@ public class AiContentService {
         String mDesc = mDraft.description() != null ? mDraft.description().trim() : "";
         if (mDesc.length() > 500) mDesc = mDesc.substring(0, 500);
 
-        Module module = moduleContent.addModule(course, new ModuleInput(mTitle, mDesc));
+        Module module = moduleContent.addModule(course, new ModuleRequest(mTitle, mDesc));
         moduleCount++;
 
         if (mDraft.lessons() != null) {
@@ -257,7 +257,7 @@ public class AiContentService {
             if (lContent.length() > 10000) lContent = lContent.substring(0, 10000);
             int duration = lDraft.durationMinutes() != null && lDraft.durationMinutes() > 0 ? lDraft.durationMinutes() : 15;
 
-            LessonInput lessonInput = new LessonInput(
+            LessonRequest lessonInput = new LessonRequest(
               module.id,
               lTitle,
               cType,
@@ -291,7 +291,7 @@ public class AiContentService {
     String topic = trim(request.topic());
     if (topic.isBlank() && course != null) topic = trim(course.title);
     if (topic.length() < 3) {
-      throw new FieldErrors("topic", "Chủ đề khóa học phải từ 3 ký tự trở lên");
+      throw new FieldValidationException("topic", "Chủ đề khóa học phải từ 3 ký tự trở lên");
     }
     if (topic.length() > 200) topic = topic.substring(0, 200);
 
@@ -364,10 +364,10 @@ public class AiContentService {
     sb.append("```\n");
 
     int dynamicTokens = Math.min(3500, Math.max(1200, moduleCount * lessonsPerModule * 100));
-    String raw = integrations.generateText(sb.toString(), dynamicTokens);
+    String raw = geminiProxy.generateText(sb.toString(), dynamicTokens);
     List<CourseDraft.ModuleDraft> modules = parseModulesJson(raw);
     if (modules == null || modules.isEmpty()) {
-      throw new FieldErrors("topic", "AI không thể tạo cấu trúc module hợp lệ. Vui lòng thử lại với chủ đề chi tiết hơn.");
+      throw new FieldValidationException("topic", "AI không thể tạo cấu trúc module hợp lệ. Vui lòng thử lại với chủ đề chi tiết hơn.");
     }
     return new CurriculumAiResponse(topic, modules);
   }
@@ -375,7 +375,7 @@ public class AiContentService {
   public Map<String, Object> applyCurriculum(Long courseId, ApplyCurriculumRequest request, User teacher) {
     Course course = content.ownedCourse(courseId, teacher);
     if (request == null || request.modules() == null || request.modules().isEmpty()) {
-      throw new FieldErrors("modules", "Danh sách module cần áp dụng không được để trống");
+      throw new FieldValidationException("modules", "Danh sách module cần áp dụng không được để trống");
     }
     int addedModules = 0;
     int addedLessons = 0;
@@ -387,7 +387,7 @@ public class AiContentService {
       String mDesc = mDraft.description() != null ? mDraft.description().trim() : "";
       if (mDesc.length() > 500) mDesc = mDesc.substring(0, 500);
 
-      Module module = moduleContent.addModule(course, new ModuleInput(mTitle, mDesc));
+      Module module = moduleContent.addModule(course, new ModuleRequest(mTitle, mDesc));
       addedModules++;
 
       if (mDraft.lessons() != null) {
@@ -405,7 +405,7 @@ public class AiContentService {
           if (lContent.length() > 10000) lContent = lContent.substring(0, 10000);
           int duration = lDraft.durationMinutes() != null && lDraft.durationMinutes() > 0 ? lDraft.durationMinutes() : 15;
 
-          LessonInput lessonInput = new LessonInput(
+          LessonRequest lessonInput = new LessonRequest(
             module.id,
             lTitle,
             cType,
@@ -432,7 +432,7 @@ public class AiContentService {
 
   public LessonBatchAiResponse generateLessonsForModule(LessonBatchAiRequest request, User teacher) {
     if (request == null || request.moduleId() == null) {
-      throw new FieldErrors("moduleId", "Thiếu mã module mục tiêu");
+      throw new FieldValidationException("moduleId", "Thiếu mã module mục tiêu");
     }
     Module module = content.ownedModule(request.moduleId(), teacher);
     Course course = module.course;
@@ -531,10 +531,10 @@ public class AiContentService {
     sb.append("```\n");
 
     int dynamicTokens = Math.min(3200, Math.max(900, count * 550));
-    String raw = integrations.generateText(sb.toString(), dynamicTokens);
+    String raw = geminiProxy.generateText(sb.toString(), dynamicTokens);
     List<CourseDraft.LessonDraft> rawLessons = parseLessonsJson(raw);
     if (rawLessons == null || rawLessons.isEmpty()) {
-      throw new FieldErrors("topic", "AI không thể tạo danh sách bài học. Vui lòng thử lại với yêu cầu chi tiết hơn.");
+      throw new FieldValidationException("topic", "AI không thể tạo danh sách bài học. Vui lòng thử lại với yêu cầu chi tiết hơn.");
     }
 
     List<CourseDraft.LessonDraft> lessons = new ArrayList<>();
@@ -561,7 +561,7 @@ public class AiContentService {
   public Map<String, Object> applyLessons(Long moduleId, ApplyLessonsRequest request, User teacher) {
     Module module = content.ownedModule(moduleId, teacher);
     if (request == null || request.lessons() == null || request.lessons().isEmpty()) {
-      throw new FieldErrors("lessons", "Danh sách bài học cần thêm không được để trống");
+      throw new FieldValidationException("lessons", "Danh sách bài học cần thêm không được để trống");
     }
 
     boolean replace = Boolean.TRUE.equals(request.replaceExisting());
@@ -584,7 +584,7 @@ public class AiContentService {
       if (lContent.length() > 10000) lContent = lContent.substring(0, 10000);
       int duration = lDraft.durationMinutes() != null && lDraft.durationMinutes() > 0 ? lDraft.durationMinutes() : 15;
 
-      LessonInput lessonInput = new LessonInput(
+      LessonRequest lessonInput = new LessonRequest(
         module.id,
         lTitle,
         cType,
