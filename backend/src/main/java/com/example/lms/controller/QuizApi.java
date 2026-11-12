@@ -92,35 +92,9 @@ public class QuizApi extends BaseController {
     User student = student(session);
     Map<String, Object> response = quizService.start(id, student);
     session.setAttribute("quiz-start-" + id, Instant.now());
-    session.setAttribute("quiz-checked-" + id, new java.util.HashMap<Long, Long>());
+
     return response;
     }
-  }
-
-  public record CheckInput(Long questionId, Long answerId) {}
-
-  @PostMapping("/quizzes/{id}/check")
-  Map<String, Object> check(@PathVariable Long id, @RequestBody CheckInput input, HttpSession session) {
-    synchronized (session) {
-      User student = student(session);
-      Object value = session.getAttribute("quiz-start-" + id);
-      Instant startedAt = value instanceof Instant instant ? instant : null;
-      Map<Long, Long> checked = checkedChoices(session, id);
-      Long previous = checked.get(input.questionId());
-      if (previous != null && !previous.equals(input.answerId()))
-        throw new org.springframework.web.server.ResponseStatusException(
-          org.springframework.http.HttpStatus.CONFLICT, "Câu trả lời đã được chốt");
-      Map<String, Object> feedback = quizService.checkAnswer(id, input.questionId(), input.answerId(), student, startedAt);
-      checked.put(input.questionId(), input.answerId());
-      session.setAttribute("quiz-checked-" + id, checked);
-      return feedback;
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private Map<Long, Long> checkedChoices(HttpSession session, Long id) {
-    Object value = session.getAttribute("quiz-checked-" + id);
-    return value instanceof Map<?, ?> ? (Map<Long, Long>) value : new java.util.HashMap<>();
   }
 
   @PostMapping("/quizzes/{id}/submit")
@@ -133,9 +107,9 @@ public class QuizApi extends BaseController {
     User student = student(session);
     Object value = session.getAttribute("quiz-start-" + id);
     Instant startedAt = value instanceof Instant instant ? instant : null;
-    QuizResult result = quizService.submit(id, new Submission(new java.util.HashMap<>(checkedChoices(session, id))), student, startedAt);
+    QuizResult result = quizService.submit(id, input, student, startedAt);
     session.removeAttribute("quiz-start-" + id);
-    session.removeAttribute("quiz-checked-" + id);
+
     return result;
     }
   }

@@ -393,8 +393,8 @@ export function ReviewPage({ review, go }) {
       <section className="take-card" aria-label="Đánh giá kết quả bằng AI">
         <h2>AI phân tích kết quả</h2>
         <p className="muted">
-          Nhận xét dựa trên bài luyện tập có phản hồi tức thì, giúp bạn xác định
-          nội dung cần ôn.
+          Nhận xét dựa trên bài luyện tập đã nộp, giúp bạn xác định nội dung cần
+          ôn.
         </p>
         {analyzing && (
           <p role="status">

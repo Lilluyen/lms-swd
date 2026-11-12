@@ -140,24 +140,6 @@ public class QuizService {
     return Map.of("durationMinutes", quiz.durationMinutes);
   }
 
-  @Transactional(readOnly = true)
-  public Map<String, Object> checkAnswer(Long id, Long questionId, Long answerId,
-      User student, Instant startedAt) {
-    Quiz quiz = accessible(id, student);
-    if (startedAt == null || Instant.now().isAfter(startedAt.plusSeconds(quiz.durationMinutes * 60L)))
-      throw new ResponseStatusException(HttpStatus.CONFLICT, "Bài làm chưa bắt đầu hoặc đã hết thời gian");
-    Question question = quizQuestions.findByQuizIdOrderByPosition(id).stream()
-      .map(link -> link.question).filter(q -> q.id.equals(questionId)).findFirst()
-      .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Câu hỏi không thuộc quiz"));
-    List<Answer> options = answers.findByQuestionId(questionId);
-    Answer selected = options.stream().filter(a -> a.id.equals(answerId)).findFirst()
-      .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đáp án không thuộc câu hỏi"));
-    Answer correct = options.stream().filter(a -> a.correct).findFirst().orElseThrow();
-    return Map.of("correct", selected.correct, "answerId", selected.id,
-      "correctAnswerId", correct.id, "correctText", correct.content,
-      "explanation", question.explanation == null ? "" : question.explanation);
-  }
-
   public QuizResult submit(
     Long id,
     Submission submission,

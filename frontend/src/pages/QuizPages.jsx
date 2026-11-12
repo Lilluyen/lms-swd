@@ -93,6 +93,39 @@ export function QuizEditorPage({
   busy,
   generateTeacherQuiz,
 }) {
+  const subjectOf = (item) => item.question.subject?.trim() || "Chưa phân môn";
+  const subjects = [...new Set(questions.map(subjectOf))].sort((a, b) =>
+    a.localeCompare(b, "vi"),
+  );
+  const [selectedSubjects, setSelectedSubjects] = React.useState(() => [
+    ...new Set(
+      questions
+        .filter((item) => form.questionIds?.includes(item.question.id))
+        .map(subjectOf),
+    ),
+  ]);
+  const toggleSubject = (subject, checked) => {
+    setSelectedSubjects((previous) =>
+      checked
+        ? [...previous, subject]
+        : previous.filter((value) => value !== subject),
+    );
+    const subjectIds = new Set(
+      questions
+        .filter((item) => subjectOf(item) === subject)
+        .map((item) => item.question.id),
+    );
+    setForm((previous) => ({
+      ...previous,
+      subject:
+        checked && !previous.subject?.trim() && subject !== "Chưa phân môn"
+          ? subject
+          : previous.subject,
+      questionIds: checked
+        ? previous.questionIds || []
+        : (previous.questionIds || []).filter((id) => !subjectIds.has(id)),
+    }));
+  };
   return (
     <>
       <PageTitle
@@ -222,26 +255,65 @@ export function QuizEditorPage({
             )}
             {!form.aiQuestions && (
               <>
-                <label>Chọn câu hỏi từ ngân hàng</label>
-                {questions.map((x) => (
-                  <label className="check" key={x.question.id}>
+                <h3>Chọn môn học trong ngân hàng</h3>
+                <p className="muted">
+                  Chọn một hoặc nhiều môn để mở danh sách câu hỏi. Bỏ chọn môn
+                  sẽ bỏ các câu đã chọn của môn đó khỏi Quiz.
+                </p>
+                {subjects.map((subject) => (
+                  <label className="check" key={subject}>
                     <input
                       type="checkbox"
-                      checked={form.questionIds?.includes(x.question.id)}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          questionIds: e.target.checked
-                            ? [...form.questionIds, x.question.id]
-                            : form.questionIds.filter(
-                                (v) => v !== x.question.id,
-                              ),
-                        })
+                      checked={selectedSubjects.includes(subject)}
+                      onChange={(event) =>
+                        toggleSubject(subject, event.target.checked)
                       }
                     />
-                    {x.question.content}
+                    {subject} (
+                    {
+                      questions.filter((item) => subjectOf(item) === subject)
+                        .length
+                    }{" "}
+                    câu)
                   </label>
                 ))}
+                {!subjects.length && (
+                  <Empty text="Ngân hàng chưa có câu hỏi. Hãy thêm câu hỏi hoặc tạo bằng AI." />
+                )}
+                {subjects.length > 0 && !selectedSubjects.length && (
+                  <p className="muted">Chọn môn học để xem câu hỏi.</p>
+                )}
+                {selectedSubjects.map((subject) => (
+                  <section key={subject} aria-label={`Câu hỏi môn ${subject}`}>
+                    <h4>{subject}</h4>
+                    {questions
+                      .filter((item) => subjectOf(item) === subject)
+                      .map((x) => (
+                        <label className="check" key={x.question.id}>
+                          <input
+                            type="checkbox"
+                            checked={(form.questionIds || []).includes(
+                              x.question.id,
+                            )}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                questionIds: e.target.checked
+                                  ? [...(form.questionIds || []), x.question.id]
+                                  : (form.questionIds || []).filter(
+                                      (v) => v !== x.question.id,
+                                    ),
+                              })
+                            }
+                          />
+                          {x.question.content}
+                        </label>
+                      ))}
+                  </section>
+                ))}
+                <p aria-live="polite">
+                  Đã chọn {form.questionIds?.length || 0} câu hỏi.
+                </p>
               </>
             )}
           </>
@@ -322,12 +394,34 @@ export function PracticeAiPage({ form, setForm, busy, generatePractice }) {
 export function TakeQuizPage({
   quizData,
   choices,
-  checkAnswer,
-  feedback,
+  setChoices,
   remaining,
   busy,
   submitQuiz,
 }) {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [showSummary, setShowSummary] = React.useState(false);
+  const [reviewSkipped, setReviewSkipped] = React.useState(false);
+  const total = quizData.questions.length;
+  const q = quizData.questions[currentIndex];
+  const unanswered = quizData.questions.filter(
+    (question) => !choices[question.id],
+  );
+  const advance = () => {
+    if (reviewSkipped || currentIndex === total - 1) {
+      setShowSummary(true);
+    } else {
+      setCurrentIndex((index) => index + 1);
+    }
+  };
+  const confirmSubmit = () =>
+    Modal.confirm({
+      title: "Nộp bài luyện tập?",
+      content: `Đã trả lời ${total - unanswered.length}/${total} câu. ${unanswered.length ? `${unanswered.length} câu chưa trả lời sẽ không được tính điểm.` : "Bạn đã trả lời tất cả câu hỏi."}`,
+      okText: "Nộp bài",
+      cancelText: "Tiếp tục làm",
+      onOk: submitQuiz,
+    });
   return (
     <>
       <div className="quiz-timer">
@@ -343,13 +437,14 @@ export function TakeQuizPage({
         desc={`${quizData.questions.length} câu hỏi · ${quizData.quiz.durationMinutes} phút`}
       />
       <p className="muted">
-        Chọn đáp án để xem đúng/sai và giải thích ngay. Mỗi câu được chốt sau
-        khi chọn và không thể đổi lại.
+        Chọn đáp án rồi chuyển sang câu tiếp theo, hoặc bỏ qua để làm sau. Bạn
+        có thể đổi đáp án trước khi nộp. Kết quả và giải thích chỉ hiển thị sau
+        khi nộp bài.
       </p>
-      {quizData.questions.map((q, i) => (
+      {!showSummary && q && (
         <div className="take-card" key={q.id}>
-          <span className="kicker">
-            CÂU HỎI {String(i + 1).padStart(2, "0")}
+          <span className="kicker" aria-live="polite">
+            CÂU HỎI {currentIndex + 1}/{total}
           </span>
           <h3>{q.content}</h3>
           {q.answers.map((a) => (
@@ -361,42 +456,81 @@ export function TakeQuizPage({
                 type="radio"
                 name={"q" + q.id}
                 checked={choices[q.id] === a.id}
-                disabled={busy || remaining === 0 || Boolean(feedback[q.id])}
-                onChange={() => checkAnswer(q.id, a.id)}
+                disabled={busy || remaining === 0}
+                onChange={() =>
+                  setChoices((previous) => ({ ...previous, [q.id]: a.id }))
+                }
               />
               {a.content}
             </label>
           ))}
-          {feedback[q.id] && (
-            <div
-              className={`quiz-feedback ${feedback[q.id].correct ? "is-correct" : "is-incorrect"}`}
-              role="status"
-            >
-              <strong>
-                {feedback[q.id].correct ? "✓ Chính xác!" : "✗ Chưa chính xác"}
-              </strong>
-              <p>Đáp án đúng: {feedback[q.id].correctText}</p>
-              <p>
-                {feedback[q.id].explanation ||
-                  "Giáo viên chưa thêm giải thích cho câu này."}
-              </p>
-            </div>
-          )}
+
+          <div className="actions" style={{ marginTop: 20 }}>
+            {choices[q.id] ? (
+              <button
+                className="primary"
+                disabled={busy || remaining === 0}
+                onClick={advance}
+              >
+                {reviewSkipped
+                  ? "Về tổng kết"
+                  : currentIndex === total - 1
+                    ? "Xem tổng kết"
+                    : "Câu tiếp theo"}
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button
+                className="outline"
+                disabled={busy || remaining === 0}
+                onClick={advance}
+              >
+                {reviewSkipped ? "Bỏ qua, về tổng kết" : "Bỏ qua câu này"}
+                <ArrowRight size={16} />
+              </button>
+            )}
+          </div>
         </div>
-      ))}
-      <button
-        className="primary"
-        disabled={busy}
-        onClick={() =>
-          Modal.confirm({
-            title: "Nộp bài luyện tập?",
-            content: `Đã trả lời ${Object.keys(choices).length}/${quizData.questions.length} câu.`,
-            okText: "Nộp bài",
-            cancelText: "Tiếp tục làm",
-            onOk: submitQuiz,
-          })
-        }
-      >
+      )}
+      {showSummary && (
+        <section className="take-card" aria-label="Tổng kết bài làm">
+          <h2>Bạn đã xem hết các câu hỏi</h2>
+          <p>
+            Đã trả lời {total - unanswered.length}/{total} câu.
+          </p>
+          {unanswered.length ? (
+            <>
+              <p>
+                Còn {unanswered.length} câu đã bỏ qua. Bạn có thể quay lại trả
+                lời trước khi nộp:
+              </p>
+            </>
+          ) : (
+            <p>
+              Bạn đã hoàn thành tất cả câu hỏi. Hãy nộp bài để xem kết quả và
+              phân tích AI.
+            </p>
+          )}
+          <div className="actions">
+            {quizData.questions.map((question, index) => (
+              <button
+                className="outline"
+                key={question.id}
+                disabled={busy || remaining === 0}
+                onClick={() => {
+                  setCurrentIndex(index);
+                  setReviewSkipped(true);
+                  setShowSummary(false);
+                }}
+              >
+                Câu {index + 1} ·{" "}
+                {choices[question.id] ? "Đã chọn – xem lại" : "Chưa trả lời"}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      <button className="primary" disabled={busy} onClick={confirmSubmit}>
         Nộp bài <ArrowRight size={16} />
       </button>
     </>

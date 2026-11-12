@@ -15,7 +15,7 @@ import static org.mockito.ArgumentMatchers.*;
 
 class QuizLiveAnswerTest {
   @Test
-  void locksFirstAnswerAndSubmitsServerChoicesInsteadOfForgedClientChoices() {
+  void submitsFinalStudentChoicesOnlyAfterSubmission() {
     var users = mock(UserRepo.class);
     var service = mock(QuizService.class);
     var api = new QuizApi(mock(CourseRepo.class), mock(QuestionRepo.class), mock(AnswerRepo.class),
@@ -26,15 +26,10 @@ class QuizLiveAnswerTest {
     var session = new MockHttpSession(); session.setAttribute("uid", 1L);
     when(service.start(2L, student)).thenReturn(Map.of("durationMinutes", 5));
     api.start(2L, session);
-    when(service.checkAnswer(eq(2L), eq(3L), eq(4L), eq(student), any(Instant.class)))
-      .thenReturn(Map.of("correct", false));
-    api.check(2L, new QuizApi.CheckInput(3L, 4L), session);
-    assertThrows(ResponseStatusException.class,
-      () -> api.check(2L, new QuizApi.CheckInput(3L, 5L), session));
     var result = new QuizResult();
     when(service.submit(eq(2L), any(), eq(student), any())).thenReturn(result);
     assertSame(result, api.submit(2L, new Submission(Map.of(3L, 5L)), session));
-    verify(service).submit(eq(2L), eq(new Submission(Map.of(3L, 4L))), eq(student), any());
+    verify(service).submit(eq(2L), eq(new Submission(Map.of(3L, 5L))), eq(student), any());
     assertNull(session.getAttribute("quiz-start-2"));
     assertNull(session.getAttribute("quiz-checked-2"));
   }

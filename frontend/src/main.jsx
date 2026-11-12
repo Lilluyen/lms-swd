@@ -73,7 +73,6 @@ function App() {
     [menu, T] = useState(false),
     [generated, G] = useState([]);
   const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
-  const [answerFeedback, setAnswerFeedback] = useState({});
   const contentRef = useRef(null);
   usePageMotion(contentRef, [page]);
   useCountUp(contentRef, [page, mine.length, quizzes.length, results.length]);
@@ -162,7 +161,6 @@ function App() {
       await post("/quizzes/" + q.id + "/start", {});
       ST(q.durationMinutes * 60);
       H({});
-      setAnswerFeedback({});
       P("take");
     });
   const submitQuiz = () =>
@@ -175,18 +173,6 @@ function App() {
       ST(null);
       P("review");
       await refresh();
-    });
-  const checkQuizAnswer = (questionId, answerId) =>
-    action(async () => {
-      const feedback = await post(`/quizzes/${quizData.quiz.id}/check`, {
-        questionId,
-        answerId,
-      });
-      H((previous) => ({ ...previous, [questionId]: feedback.answerId }));
-      setAnswerFeedback((previous) => ({
-        ...previous,
-        [questionId]: feedback,
-      }));
     });
   const editQuiz = (q) =>
     action(async () => {
@@ -750,8 +736,8 @@ function App() {
             <TakeQuizPage
               quizData={quizData}
               choices={choices}
-              checkAnswer={checkQuizAnswer}
-              feedback={answerFeedback}
+              setChoices={H}
+
               remaining={remaining}
               busy={busy}
               submitQuiz={submitQuiz}
